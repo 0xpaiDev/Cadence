@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "fetched_at": "2025-06-15T06:00:00Z",
+  "date": "2025-06-15",
+  "events": [
+    {
+      "title": "Team standup",
+      "start": "2025-06-15T09:00:00Z",
+      "end": "2025-06-15T09:30:00Z",
+      "location": "Google Meet",
+      "calendar": "Work",
+      "all_day": false
+    },
+    {
+      "title": "Code review",
+      "start": "2025-06-15T14:00:00Z",
+      "end": "2025-06-15T15:00:00Z",
+      "location": null,
+      "calendar": "Work",
+      "all_day": false
+    }
+  ],
+  "tomorrow_preview": [
+    {
+      "title": "Conference",
+      "start": "2025-06-16T10:00:00Z",
+      "all_day": false
+    }
+  ]
+}

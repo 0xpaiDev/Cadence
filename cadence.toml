@@ -1,0 +1,41 @@
+# Cadence Configuration
+# Personal intelligence system — daily note pipeline with interactive review
+
+[vault]
+# Path to the vault directory (synced via Syncthing, separate from this repo)
+path = "/home/shu/vault"
+
+[fetch]
+# Cron hour for morning pipeline (0-23 UTC)
+cron_hour = 6
+# Maximum age of state files before showing stale warning (hours)
+max_state_age_hours = 2
+
+[context]
+# Token budget for daily_context.md (used to trim items if needed)
+token_budget = 2000
+# Maximum news items to include in context/draft
+news_max_items = 10
+
+[agent]
+# AI runtime: "claude_api" (MVP)
+runtime = "claude_api"
+# Claude model to use for daily planner and negotiation
+model = "claude-sonnet-4-6"
+# Max tokens in single agent response
+max_tokens = 1500
+# Path to daily planner prompt template (relative to vault/.system/config/)
+planner_prompt_path = "daily_template.md"
+# Path to negotiation agent prompt template
+negotiation_prompt_path = "negotiation_template.md"
+
+[api]
+# FastAPI server binding
+host = "0.0.0.0"
+port = 8420
+# CORS origins (add Tailscale IP in production)
+allowed_origins = ["http://localhost:8420"]
+
+[logging]
+# Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+level = "INFO"

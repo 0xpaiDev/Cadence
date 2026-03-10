@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Cadence — Personal Intelligence System">
+    <title>Cadence</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app"></div>
+
+    <!-- Loading state -->
+    <div id="loading" class="loading">Loading...</div>
+
+    <!-- Error overlay -->
+    <div id="error-overlay" class="error-overlay" style="display: none;">
+        <div class="error-box">
+            <h2>Something went wrong</h2>
+            <p id="error-message"></p>
+            <button onclick="location.reload()">Retry</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

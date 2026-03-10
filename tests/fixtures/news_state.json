@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "fetched_at": "2025-06-15T06:00:00Z",
+  "items": [
+    {
+      "title": "Claude 4 Released with Extended Context",
+      "source": "Anthropic Blog",
+      "url": "https://anthropic.com/news/claude-4",
+      "summary": "New model supports 500k tokens with improved reasoning capabilities.",
+      "topic": "Anthropic",
+      "published": "2025-06-15T00:00:00Z",
+      "relevance": 0.95
+    },
+    {
+      "title": "AI Safety Research Update",
+      "source": "AI Safety Institute",
+      "url": "https://aisafety.org/update",
+      "summary": "New findings on model interpretability.",
+      "topic": "AI",
+      "published": "2025-06-14T00:00:00Z",
+      "relevance": 0.65
+    }
+  ],
+  "errors": []
+}

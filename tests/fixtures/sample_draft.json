@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "date": "2025-06-15",
+  "generated_at": "2025-06-15T06:02:00Z",
+  "news": [
+    {
+      "id": "n1",
+      "topic": "Anthropic",
+      "headline": "Claude 4 Released with Extended Context",
+      "summary": "New model supports 500k tokens with improved reasoning.",
+      "url": "https://anthropic.com/news/claude-4",
+      "relevance": 0.95
+    }
+  ],
+  "schedule": [
+    {
+      "id": "s1",
+      "time_start": "09:00",
+      "time_end": "09:30",
+      "title": "Team standup",
+      "location": "Google Meet",
+      "all_day": false
+    }
+  ],
+  "tomorrow_preview": [],
+  "tasks": [
+    {
+      "id": "t1_1234567890",
+      "text": "Review PR for auth module",
+      "source": "today",
+      "priority": "normal",
+      "status": "pending",
+      "completed_at": null,
+      "notes": null
+    }
+  ],
+  "training": {
+    "summary": "Week progress: 20/100km. Long ride needed before Sunday.",
+    "plan_reference": "data/training/plan.md"
+  },
+  "agent_suggestions": [
+    "Light task day — consider tackling the backlog integration tests."
+  ]
+}
