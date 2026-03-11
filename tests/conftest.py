@@ -151,9 +151,85 @@ def sample_draft():
     }
 
 
+@pytest.fixture
+def sample_day_state():
+    """Provide sample day state."""
+    return {
+        "schema_version": 1,
+        "date": "2025-06-15",
+        "status": "draft_pending",
+        "draft_generated_at": "2025-06-15T06:02:00Z",
+        "negotiation_started_at": None,
+        "approved_at": None,
+        "completed_at": None,
+    }
+
+
+@pytest.fixture
+def sample_day_tasks():
+    """Provide sample day tasks."""
+    return {
+        "schema_version": 1,
+        "date": "2025-06-15",
+        "tasks": [
+            {
+                "id": "t1_1234567890",
+                "text": "Review PR for auth module",
+                "source": "today",
+                "priority": "normal",
+                "status": "pending",
+                "created_at": "2025-06-15T06:00:00Z",
+                "completed_at": None,
+                "notes": None,
+                "drop_reason": None,
+                "deferred_to": None,
+            },
+            {
+                "id": "t2_1234567891",
+                "text": "Fix database connection issue",
+                "source": "carried_over",
+                "priority": "high",
+                "status": "completed",
+                "created_at": "2025-06-14T10:00:00Z",
+                "completed_at": "2025-06-15T14:30:00Z",
+                "notes": "Resolved by upgrading driver",
+                "drop_reason": None,
+                "deferred_to": None,
+            },
+        ],
+    }
+
+
+@pytest.fixture
+def sample_decisions():
+    """Provide sample day decisions."""
+    return {
+        "schema_version": 1,
+        "date": "2025-06-15",
+        "negotiation_decisions": [
+            {
+                "timestamp": "2025-06-15T06:30:00Z",
+                "action": "declined",
+                "target": "Suggested task: write docs",
+                "reason": "Not enough context on scope",
+                "energy_note": "Low energy for writing today",
+                "context_tag": "morning_negotiation",
+                "agent_suggestion": "write docs for new API endpoints",
+            }
+        ],
+        "task_outcomes": [
+            {
+                "task_id": "t2_1234567891",
+                "text": "Fix database connection issue",
+                "status": "completed",
+                "completed_at": "2025-06-15T14:30:00Z",
+                "notes": "Resolved by upgrading driver",
+                "duration_estimate": "2h",
+            }
+        ],
+    }
+
+
 # TODO: Add more fixtures
-# - sample_day_state
-# - sample_day_tasks
-# - sample_decisions
-# - malformed JSON files
-# - old schema version files
+# - malformed JSON files (done: calendar_state_malformed.json, news_state_malformed.json)
+# - old schema version files (done: calendar_state_v0.json)

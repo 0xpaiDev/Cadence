@@ -379,3 +379,18 @@ The next session will:
 4. Verify imports work
 
 After Phase 1 is done and tested, subsequent sessions will follow phases 2-10 sequentially.
+
+## 💡 Learning & Patterns
+- Document surprising patterns or common mistakes here to help future sessions.
+- **Minimalist Rule:** Add entries only when something goes wrong; remove when fixed.
+- **Workflow:** Read `PROGRESS.md` at the start of every session for current state.
+- **Learning Folder Rule:** Whenever introducing a new tool, feature, library, framework, or process that would be beneficial for the user to understand, update `learning/` folder with a focused guide or topic list. Examples: "Phase 2 introduces build_context.py and markdown templating" → create `learning/phase2-context-builder.md` with topics like template syntax, markdown structure, string formatting. Link new files from MEMORY.md for discovery.
+
+## 🤖 Swarm & Architecture Rules
+- **Stack:** Python 3.11+, FastAPI, Pydantic v2, Claude API (claude-sonnet-4-6).
+- **Structure:** Feature-area folders — `scripts/` (pipeline/fetchers/agent), `api/` (server/routes/negotiation), `tests/` (mirrors source layout), `webapp/` (single SPA). Do not flatten or reorganise without explicit instruction.
+- **Imports:** Always use absolute module paths (e.g. `from scripts.schemas import Task`). Never use relative imports (`from ..schemas`) unless inside a package that requires it.
+- **Testing:** Test files live in `tests/` and mirror the module they test (e.g. `tests/test_schemas.py` ↔ `scripts/schemas.py`). Fixtures go in `tests/fixtures/`.
+- **Conflict Resolution:** If agents disagree on file placement or API design, the Lead Agent defaults to the architecture defined in this CLAUDE.md and the phased plan in IMPLEMENTATION_PLAN.md.
+- **Agent Scope:** Each agent should own a single phase or a clearly bounded file set. Avoid agents touching files outside their stated scope without flagging it.
+- **State Invariant:** VPS writes only to `vault/.system/`. Never let an agent write user-facing files (Daily/, data/) except through the `POST /api/approve` code path.

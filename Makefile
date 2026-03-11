@@ -1,4 +1,4 @@
-.PHONY: help test test-all test-schema test-context test-fetch test-agent test-api test-negotiate test-tasks fetch pipeline serve serve-prod check-state lint init-vault install clean
+.PHONY: help test test-all test-schema test-context test-fetch test-agent test-api test-negotiate test-tasks fetch pipeline serve serve-prod check-state lint init-vault install clean commit push
 
 help:
 	@echo "Cadence Development Commands"
@@ -28,6 +28,10 @@ help:
 	@echo "  make init-vault        Initialize vault directory structure"
 	@echo "  make install           Install dev dependencies"
 	@echo "  make clean             Remove build artifacts, caches, logs"
+	@echo ""
+	@echo "Git:"
+	@echo "  make commit            Stage all changes and commit (prompts for message)"
+	@echo "  make push              Push commits to origin (requires message arg: make push MSG='...')"
 
 install:
 	pip install -e ".[dev]"
@@ -97,3 +101,17 @@ clean:
 	rm -rf .pytest_cache .coverage htmlcov
 	rm -rf build dist *.egg-info
 	find . -type f -name "*.log" -delete
+
+commit:
+	@git status
+	@echo ""
+	@read -p "Commit message: " msg; \
+	git add -A && git commit -m "$$msg"
+
+push:
+	@if [ -z "$(MSG)" ]; then \
+		echo "Error: Commit message required"; \
+		echo "Usage: make push MSG='Your commit message'"; \
+		exit 1; \
+	fi
+	git add -A && git commit -m "$(MSG)" && git push origin main

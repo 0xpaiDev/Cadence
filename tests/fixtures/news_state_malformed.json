@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "fetched_at": "2026-03-11T06:00:00Z",
+  "items": [
+    {
+      "title": "Claude 4.5 Released",
+      "source": "Anthropic Blog",
+      "url": "https://anthropic.com/news",
+      "summary": "New Claude model available",
+      "topic": "Anthropic",
+      "published": "2026-03-10T15:00:00Z",
+      "relevance": 1.5
+    }
+  ],
+  "errors": []
+}
