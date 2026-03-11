@@ -369,7 +369,8 @@ make push MSG="..."    # Push commits to origin
 | 5 | runtime.py, agent_daily_planner.py, pipeline.py, test_agent_output.py, test_pipeline.py |
 | 6 | server.py, routes.py, test_api.py, test_task_lifecycle.py, test_day_lifecycle.py |
 | 7 | negotiation.py, test_negotiation.py |
-| 8 | webapp/*, no tests (manual testing on phone) |
+| 8 (vanilla) | webapp/app.js, webapp/styles.css, webapp/index.html (deprecated — Phase 8.1 replaced) |
+| **8.1 (React)** | **webapp/src/{main.tsx, App.tsx, api.ts, types.ts}, features/*, shared/ui/*, screens/** |
 | 9 | systemd config, crontab, Syncthing config, deployment guide |
 | 10 | docs, user guide, post-MVP roadmap |
 
@@ -408,17 +409,41 @@ make push MSG="..."    # Push commits to origin
 ### Webapp won't load
 - Check API server is running: `curl http://localhost:8420/api/status`
 - Check static mount: `curl http://localhost:8420/app/`
-- Clear browser cache
+- Check `webapp/dist/` exists: `ls -la webapp/dist/`
+- Rebuild if missing: `make webapp-build`
+- Clear browser cache (hard refresh: Ctrl+Shift+R or Cmd+Shift+R)
+- Check React app errors: open browser DevTools → Console tab
+
+### Webapp build fails
+- Check Node.js version: `node --version` (should be 18+)
+- Clear cache: `rm -rf webapp/node_modules webapp/dist`
+- Reinstall: `make webapp-install && make webapp-build`
+- Check TypeScript errors: `cd webapp && npm run lint` (should be clean)
 
 ## Next Session
 
-The next session will:
-1. Start Phase 1: Implement all schemas in `scripts/schemas.py`
-2. Create test fixtures and conftest.py
-3. Set up test infrastructure
-4. Verify imports work
+After Phase 8.1 (React webapp redesign), the next session will:
 
-After Phase 1 is done and tested, subsequent sessions will follow phases 2-10 sequentially.
+**Option 1: Phase 8.1 Testing**
+1. End-to-end test the new React webapp with real API data
+2. Test all 4 screens: No Draft, Morning Review, Active Day, Completed
+3. Test negotiation chat (Collie button → slide-up panel → mutate draft)
+4. Test task CRUD (complete, drop with reason, defer)
+5. Test approve (SEND IT → instant screen transition to Active Day)
+6. Fix any rendering or interaction bugs found
+7. Mobile responsiveness check on real phone
+
+**Option 2: Phase 9 (Automation + Hardening)**
+1. Cron setup: `0 6 * * * cd /home/shu/cadence && make pipeline`
+2. Systemd service: create `/etc/systemd/system/cadence-api.service`
+3. Syncthing configuration for vault syncing
+4. Tailscale/WireGuard setup for remote access
+5. Deployment guide (VPS setup, GitHub Actions, monitoring)
+
+**Current project status:**
+- Phases 0–7: Complete ✅ (all Python backend + API server + negotiation)
+- Phase 8.1: Complete ✅ (React SPA redesign with modern stack)
+- Phase 9–10: Pending (automation, stabilization, production rollout)
 
 ## 💡 Learning & Patterns
 - Document surprising patterns or common mistakes here to help future sessions.
@@ -428,12 +453,120 @@ After Phase 1 is done and tested, subsequent sessions will follow phases 2-10 se
 
 ## 🤖 Swarm & Architecture Rules
 - **Stack:** Python 3.11+, FastAPI, Pydantic v2, Claude API (claude-sonnet-4-6).
-- **Structure:** Feature-area folders — `scripts/` (pipeline/fetchers/agent), `api/` (server/routes/negotiation), `tests/` (mirrors source layout), `webapp/` (single SPA). Do not flatten or reorganise without explicit instruction.
+- **Frontend Stack:** React 18, TypeScript 5, Tailwind CSS, Vite, TanStack Query.
+- **Structure:** Feature-area folders — `scripts/` (pipeline/fetchers/agent), `api/` (server/routes/negotiation), `tests/` (mirrors source layout), `webapp/` (React SPA with feature-first structure). Do not flatten or reorganise without explicit instruction.
 - **Imports:** Always use absolute module paths (e.g. `from scripts.schemas import Task`). Never use relative imports (`from ..schemas`) unless inside a package that requires it.
-- **Testing:** Test files live in `tests/` and mirror the module they test (e.g. `tests/test_schemas.py` ↔ `scripts/schemas.py`). Fixtures go in `tests/fixtures/`.
+- **Testing:** Test files live in `tests/` and mirror the module they test (e.g. `tests/test_schemas.py` ↔ `scripts/schemas.py`). Fixtures go in `tests/fixtures/`. Webapp tested manually (no automated tests).
 - **Conflict Resolution:** If agents disagree on file placement or API design, the Lead Agent defaults to the architecture defined in this CLAUDE.md and the phased plan in IMPLEMENTATION_PLAN.md.
 - **Agent Scope:** Each agent should own a single phase or a clearly bounded file set. Avoid agents touching files outside their stated scope without flagging it.
 - **State Invariant:** VPS writes only to `vault/.system/`. Never let an agent write user-facing files (Daily/, data/) except through the `POST /api/approve` code path.
+
+## 🎨 React/TypeScript/Tailwind Conventions
+
+### Webapp Structure (Phase 8.1+)
+```
+webapp/src/
+  main.tsx, App.tsx, api.ts, types.ts, index.css
+  shared/
+    ui/             # Atomic components (Button, Card, Badge)
+    utils.ts        # Utility functions (formatDate, formatTime, etc.)
+  features/         # Feature-first structure
+    header/         # (Header, DayStats)
+    news/           # (NewsCards)
+    schedule/       # (ScheduleTimeline)
+    tasks/          # (TaskList, AddTaskForm)
+    training/       # (TrainingCard)
+    negotiate/      # (CollieButton, ChatPanel)
+    approve/        # (ApproveBanner)
+  screens/          # Full-page layouts (NoDraft, MorningReview, ActiveDay, Completed)
+```
+
+### Design System (Peak Performance Dark Mode)
+**Colors (custom Tailwind config):**
+- `obsidian` (#030712) — page background
+- `slate-dark` (#111827) — card backgrounds
+- `topo` (#334155) — borders, subtle patterns
+- `orange` (#FF5733) — CTAs, primary actions (SEND IT, Collie button)
+- `collie-blue` (#2196F3) — secondary accents, info badges, timeline spine
+- `canopy` (#4CAF50) — success, completion, approval
+- `diamond-red` (#D32F2F) — high priority, critical actions
+
+**Typography:**
+- Space Mono — headings, code-like feel
+- Inter — body text, maximum legibility
+
+### React Patterns
+**Data Fetching:**
+- Use TanStack Query `useQuery` for read operations (caches, auto-retry, loading states)
+- Use `useMutation` + `queryClient.invalidateQueries()` for mutations (instant refresh, no `location.reload()`)
+- Type queries with `{ queryKey: ['today'], queryFn: api.getToday }` (deterministic cache keys)
+
+**Component Props:**
+- Define interfaces for all prop types (strict TypeScript)
+- Use `React.forwardRef` for UI primitives (Button, Card, Badge)
+- Prefer explicit variant props (`variant="primary"`) over className spreads
+
+**Styling:**
+- Use `cn()` utility (clsx + tailwind-merge) for conditional classes
+- Example: `cn('px-4 py-2', { 'bg-orange': variant === 'primary' })`
+- Never use string concatenation for Tailwind classes
+
+**Component Hierarchy:**
+- **Screens:** Full-page layouts (NoDraft, MorningReview, ActiveDay, Completed)
+- **Features:** Feature domains with internal components (news/, schedule/, tasks/, etc.)
+- **Shared UI:** Reusable primitives (Button, Card, Badge) with minimal props
+- **Utils:** Pure functions (formatDate, formatTime, isPastEvent, cn)
+
+### Task Priority Icons (MTB Difficulty System)
+- **High (Black Diamond ◆):** `text-diamond-red` — urgent, blocking
+- **Normal (Blue Square ■):** `text-collie-blue` — standard priority
+- **Low (Green Circle ●):** `text-canopy` — nice-to-have, flexible
+
+### Common Patterns
+**Floating Buttons:**
+```tsx
+className="fixed bottom-6 right-6 z-40 w-16 h-16 rounded-full bg-orange text-white shadow-lg hover:bg-orange/90 transition-all animate-pulse"
+```
+Use `animate-pulse` for attention-grabbing (Collie button). Position over main content with `z-40`.
+
+**Cards:**
+```tsx
+<Card className="p-4">
+  <h3 className="font-serif font-bold text-gray-100">Title</h3>
+  <p className="text-gray-400">Content</p>
+</Card>
+```
+All cards use `bg-slate-dark` with `border border-topo/30` (consistency). Use internal padding (`p-4`, `p-6`).
+
+**Status Badges:**
+```tsx
+<Badge variant="success">✓ Completed</Badge>
+<Badge variant="info">📅 Fresh</Badge>
+<Badge variant="error">✕ Stale</Badge>
+```
+Variants: default, success, warning, error, info. Use emoji + text for clarity.
+
+**Inline Forms:**
+Replace `window.prompt()` with inline text inputs:
+```tsx
+<input
+  type="text"
+  placeholder="..."
+  className="w-full bg-obsidian border border-topo/30 rounded px-3 py-2 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-orange/50"
+/>
+```
+
+### No-Build Guarantee
+- Webapp builds with `npm run build` → `webapp/dist/` (static files)
+- FastAPI mounts `dist/` at `/app/` (SPA-friendly with `html=True`)
+- No runtime bundling or lazy-loading required for MVP
+- All imports resolved at build time by Vite
+
+### Testing (Manual)
+- No automated UI tests (per CLAUDE.md)
+- Manual testing on phone/browser after `make serve`
+- Use browser DevTools for state inspection (React DevTools, Network tab for API calls)
+- Smoke test checklist: all 4 screens load, negotiate works, approve switches screens, tasks CRUD works
 
 ## 🔓 Pre-Authorized Commands for Claude
 

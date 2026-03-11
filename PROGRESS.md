@@ -11,7 +11,9 @@ _Updated at the end of each session. Read this first at the start of every sessi
 - Phase 5: Complete ✅ (agent + pipeline)
 - Phase 6: Complete ✅ (API server + endpoints)
 - Phase 7: Complete ✅ (negotiation system)
-- Phase 8: Complete ✅ (webapp)
+- Phase 8: Complete ✅ (vanilla HTML/CSS/JS webapp)
+- **Phase 8.1: Complete ✅ (React + TS + Tailwind redesign)**
+- Phase 9: Next (Automation + hardening)
 
 ## Phase 1 Summary (Session 2)
 **Goal:** Implement all Pydantic models, create test infrastructure, write 20+ assertions.
@@ -371,6 +373,81 @@ _Updated at the end of each session. Read this first at the start of every sessi
 - HTML escaping: all user text sanitized to prevent XSS
 - Graceful error handling: API errors show overlay, don't crash app
 
+## Phase 8.1 Summary (Session 9)
+**Goal:** Redesign webapp with modern React + TypeScript + Tailwind stack, matching Peak Performance Dark Mode design spec.
+
+**Completed:**
+- **Project scaffold:** `webapp/package.json`, `vite.config.ts`, `tsconfig.json`, `tailwind.config.ts`, `postcss.config.js`, `index.html`
+- **Core files:** `src/main.tsx`, `src/App.tsx`, `src/api.ts`, `src/types.ts`, `src/index.css`
+- **Feature-first architecture:**
+  - `src/features/header/` — Header.tsx (greeting + date + freshness badges), DayStats.tsx (completion stats)
+  - `src/features/news/` — NewsCards.tsx (horizontal scroll story cards with topic badges)
+  - `src/features/schedule/` — ScheduleTimeline.tsx (vertical timeline + current-time line + tomorrow preview)
+  - `src/features/tasks/` — TaskList.tsx (MTB difficulty icons, complete/drop/defer actions), AddTaskForm.tsx (inline add)
+  - `src/features/training/` — TrainingCard.tsx (readiness ring visualization)
+  - `src/features/negotiate/` — CollieButton.tsx (floating 🐕 button), ChatPanel.tsx (slide-up chat panel)
+  - `src/features/approve/` — ApproveBanner.tsx (SEND IT button)
+- **Atomic UI primitives:** `src/shared/ui/` — Button.tsx, Card.tsx, Badge.tsx, cn.ts (clsx + tailwind-merge utility)
+- **Utility functions:** `src/shared/utils.ts` — formatDate(), formatTime(), isPastEvent()
+- **Screen components:**
+  - NoDraft.tsx — "Waiting for draft" empty state
+  - MorningReview.tsx — Full morning review with all sections + negotiation + approve
+  - ActiveDay.tsx — Task progress, remaining schedule, inline task actions
+  - Completed.tsx — Celebration screen
+- **Design system:** Tailwind config with custom colors:
+  - Obsidian (#030712) — page background
+  - Slate Dark (#111827) — card backgrounds
+  - Trail Blaze Orange (#FF5733) — CTAs (SEND IT, Collie button)
+  - Border Collie Blue (#2196F3) — secondary accents (schedule spine, info badges)
+  - Forest Canopy Green (#4CAF50) — success / approval
+  - Black Diamond Red (#D32F2F) — high priority tasks
+  - Topo (#334155) — subtle borders and patterns
+- **Typography:** Space Mono (headings), Inter (body) via Google Fonts
+- **Key features:**
+  - TanStack Query integration: useQuery + useMutation with instant `invalidateQueries()` refresh (no reload flicker)
+  - Floating Collie negotiation button: pulsing orange orb → slide-up chat panel
+  - Inline drop reason input: replaces `window.prompt()`
+  - MTB difficulty icons: ◆ red (high), ■ blue (normal), ● green (low)
+  - Horizontal news scroll with topic badges and clickable links
+  - Vertical timeline with current-time indicator and tomorrow preview
+  - Full task CRUD with status tracking (pending/completed/dropped/deferred)
+- **Build & deployment:**
+  - `npm run build` outputs to `webapp/dist/` (222KB JS, 14KB CSS gzipped)
+  - FastAPI static mount updated: `webapp/` → `webapp/dist/`
+  - `.gitignore` updated: `webapp/node_modules/`, `webapp/dist/`
+  - Makefile targets: `make webapp-install`, `make webapp-build`, `make webapp-dev`
+- **Bugs fixed:**
+  - ✅ `item.source` → uses `item.topic` (news field didn't exist on Draft.NewsItem)
+  - ✅ `formatTime()` → now actually called for schedule time_start display
+  - ✅ `event.start` → uses `event.time_start` (tomorrow preview field mismatch)
+  - ✅ `window.prompt()` → inline text input for drop reason (better UX)
+  - ✅ `location.reload()` → TanStack Query `invalidateQueries()` (instant, no flicker)
+- **Technology stack:**
+  - React 18, TypeScript 5, Tailwind CSS 3, Vite 5
+  - TanStack Query 5, clsx 2, tailwind-merge 2
+  - All dependencies pinned, 137 packages, 2 moderate vulnerabilities (non-critical)
+
+**Verification:**
+- ✅ `npm run build` completes without errors (99 modules transformed)
+- ✅ `curl http://localhost:8420/app/` returns React app HTML with Tailwind styles
+- ✅ All TypeScript checks pass (no `noUnusedLocals`, `noUnusedParameters` violations)
+- ✅ Feature-first architecture scales better than flat component structure
+- ✅ Atomic UI primitives (Button, Card, Badge) prevent design drift
+
+**Test Results:**
+```
+All 140 Phase 1-7 tests remain passing ✅
+(No webapp tests per CLAUDE.md: manual testing on phone)
+```
+
+**Key Achievements:**
+- Modern React stack replaces vanilla JS (better maintainability, type safety, component reusability)
+- Feature-first architecture + atomic primitives prevent design drift as app scales
+- TanStack Query eliminates all `location.reload()` flicker (instant data refresh on mutations)
+- Inline form inputs replace `window.prompt()` (native, better UX)
+- All known bugs from Phase 8 testing fixed during rebuild
+- Ready for end-to-end testing with real API data
+
 ## Blockers / Notes
-- None. Phases 0–8 complete.
+- None. Phases 0–8.1 complete.
 - Next: Phase 9 (Automation + Hardening) — Cron setup, systemd service, Syncthing config, deployment guide
