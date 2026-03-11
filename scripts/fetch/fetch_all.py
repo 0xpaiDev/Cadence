@@ -5,7 +5,7 @@ Cron entry point: fetches news and calendar, writes state files.
 """
 
 import logging
-from pathlib import Path
+
 from scripts.config import Config, load_config
 from scripts.fetch.calendar_fetcher import CalendarFetcher
 from scripts.fetch.news_fetcher import NewsFetcher

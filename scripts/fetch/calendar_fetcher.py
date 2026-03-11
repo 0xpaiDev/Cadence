@@ -6,19 +6,16 @@ Fetches today's and tomorrow's events from Google Calendar API.
 
 import logging
 import sys
-import json
-from pathlib import Path
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from pathlib import Path
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
 
-from scripts.schemas import CalendarState, CalendarEvent, CalendarTomorrowEvent, load_state
 from scripts.config import Config
+from scripts.schemas import CalendarEvent, CalendarState, CalendarTomorrowEvent, load_state
 
 logger = logging.getLogger(__name__)
 

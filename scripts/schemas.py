@@ -4,11 +4,11 @@ Pydantic models for Cadence data structures.
 All models track schema_version to enable future migrations.
 """
 
+from datetime import datetime
 from enum import Enum
 from typing import Optional
-from datetime import datetime
-from pydantic import BaseModel, Field
 
+from pydantic import BaseModel, Field
 
 # ============================================================================
 # Calendar Models

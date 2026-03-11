@@ -1,29 +1,27 @@
 """Tests for Pydantic data schemas."""
 
+import json
+
 import pytest
 from pydantic import ValidationError
-from pathlib import Path
-import json
-from datetime import datetime
 
 from scripts.schemas import (
     CalendarEvent,
     CalendarState,
+    DayDecisions,
+    DayState,
+    DayStatus,
+    DayTasks,
+    Decision,
+    DecisionAction,
+    Draft,
     NewsItem,
     NewsState,
     Task,
-    TaskStatus,
     TaskSource,
-    DayTasks,
-    DayState,
-    DayStatus,
-    Draft,
-    DayDecisions,
-    Decision,
-    DecisionAction,
+    TaskStatus,
     load_state,
 )
-
 
 # ============================================================================
 # CalendarEvent & CalendarState Tests

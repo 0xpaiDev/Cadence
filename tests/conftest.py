@@ -4,9 +4,9 @@ Pytest configuration and fixtures.
 Provides config, vault paths, mock runtime, and sample data.
 """
 
+
 import pytest
-from pathlib import Path
-import json
+
 from scripts.config import Config
 from scripts.runtime import MockRuntime
 

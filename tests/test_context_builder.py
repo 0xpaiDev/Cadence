@@ -3,10 +3,7 @@
 import json
 from pathlib import Path
 
-import pytest
-
 from scripts.build_context import build_context_from_vault
-from scripts.config import Config
 
 FIXTURES = Path(__file__).parent / "fixtures"
 

@@ -1,20 +1,20 @@
 """Tests for news and calendar fetchers."""
 
-import json
-import pytest
 import dataclasses
+import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-from datetime import datetime
+
+import pytest
 
 from scripts.fetch.calendar_fetcher import CalendarFetcher
 from scripts.fetch.news_fetcher import NewsFetcher
 from scripts.schemas import (
-    CalendarState,
     CalendarEvent,
+    CalendarState,
     CalendarTomorrowEvent,
-    NewsState,
     NewsItem,
+    NewsState,
 )
 
 

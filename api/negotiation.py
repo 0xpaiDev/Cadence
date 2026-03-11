@@ -5,9 +5,8 @@ Handles agent-mediated conversation to refine the daily plan.
 """
 
 import logging
-from typing import Optional
+
 from ..scripts.runtime import AgentRuntime
-from ..scripts.schemas import Decision, DecisionAction
 
 logger = logging.getLogger(__name__)
 

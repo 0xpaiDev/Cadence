@@ -6,13 +6,13 @@ Fetches news from configured RSS feeds and scores by relevance.
 
 import logging
 import re
-import hashlib
-from pathlib import Path
 from datetime import datetime, timezone
+from pathlib import Path
+
 import feedparser
 
-from scripts.schemas import NewsState, NewsItem
 from scripts.config import Config
+from scripts.schemas import NewsItem, NewsState
 
 logger = logging.getLogger(__name__)
 

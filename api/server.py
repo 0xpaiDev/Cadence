@@ -4,12 +4,10 @@ FastAPI application server.
 Serves the Cadence API and static webapp.
 """
 
-from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse
-from fastapi.middleware.cors import CORSMiddleware
-from pathlib import Path
 import logging
+
+from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 
 logger = logging.getLogger(__name__)
 

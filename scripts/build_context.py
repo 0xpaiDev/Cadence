@@ -9,6 +9,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
+from scripts.config import Config
 from scripts.schemas import (
     CalendarEvent,
     CalendarState,
@@ -17,7 +18,6 @@ from scripts.schemas import (
     NewsState,
     load_state,
 )
-from scripts.config import Config
 
 logger = logging.getLogger(__name__)
 
