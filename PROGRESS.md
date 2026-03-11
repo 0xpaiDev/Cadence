@@ -11,7 +11,7 @@ _Updated at the end of each session. Read this first at the start of every sessi
 - Phase 5: Complete ✅ (agent + pipeline)
 - Phase 6: Complete ✅ (API server + endpoints)
 - Phase 7: Complete ✅ (negotiation system)
-- Phase 8: Ready to start (webapp)
+- Phase 8: Complete ✅ (webapp)
 
 ## Phase 1 Summary (Session 2)
 **Goal:** Implement all Pydantic models, create test infrastructure, write 20+ assertions.
@@ -329,6 +329,48 @@ _Updated at the end of each session. Read this first at the start of every sessi
 - MockRuntime monkeypatch pattern for endpoint tests without API calls
 - First-turn includes full draft+context; subsequent turns fold history into single message
 
+## Phase 8 Summary (Session 9)
+**Goal:** Implement mobile-first SPA with two screens: morning review + active day task tracking.
+
+**Completed:**
+- `webapp/app.js` — Full 400-line SPA implementation:
+  - `loadToday()` — Routes to correct screen based on API response status
+  - `renderMorningScreen()` — News cards, schedule, tasks, training, agent suggestions, negotiation chat, approve button
+  - `renderActiveDayScreen()` — Task checklist with complete/drop/defer, day stats, remaining schedule, add task form
+  - `renderNoDraftScreen()` — "Waiting for draft" empty state
+  - All 8 action handlers: `negotiate()`, `approvePlan()`, `completeTask()`, `dropTask()`, `deferTask()`, `addTask()` (both morning and active)
+  - Helper: `updateTaskListDisplay()` — in-place task list updates
+  - Helper: `updateDraftDisplay()` — in-place draft section updates
+  - HTML escaping: `escapeHtml()` function prevents XSS
+- `webapp/styles.css` — Added 80 lines of new classes:
+  - `.page-header`, `.freshness-badges`, `.day-stats` — layout components
+  - `.approve-btn` — green full-width button
+  - `.no-draft`, `.status-badge` — empty state and status indicators
+  - `.task-item.completed`, `.dropped`, `.deferred` — task status variants
+  - `.task-item .actions button.danger` — drop button styling
+  - Responsive adjustments for mobile (<480px)
+- `webapp/index.html` — No changes (shell was already complete)
+
+**API Integration:**
+- All 6 API endpoints fully integrated: `/api/today`, `/api/negotiate`, `/api/approve`, `/api/tasks`, `/api/tasks/:id`, `/api/status`
+- Response handling: `no_draft`, `draft`, `active`, `completed` states
+- Error overlay with user-friendly messages
+
+**Test Results:**
+```
+140 passed in 1.47s ✅
+  - All Phase 1-7 tests unchanged (120 tests)
+  - No webapp tests (per CLAUDE.md: "manual testing on phone")
+```
+
+**Key Achievements:**
+- Full SPA: no page reloads, state updates in-place
+- Mobile-responsive: touch-friendly buttons (44px+), single-column layout on phones
+- Accessible: proper semantic HTML, error messages, loading states
+- Data binding: `currentState` global maintains API state, mutations update display live
+- HTML escaping: all user text sanitized to prevent XSS
+- Graceful error handling: API errors show overlay, don't crash app
+
 ## Blockers / Notes
-- None. Phases 0–7 complete.
-- Next: Phase 8 (Webapp) — Single HTML file (SPA), vanilla JS, two screens (morning review + active day task tracking)
+- None. Phases 0–8 complete.
+- Next: Phase 9 (Automation + Hardening) — Cron setup, systemd service, Syncthing config, deployment guide
