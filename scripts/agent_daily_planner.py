@@ -6,9 +6,13 @@ Calls Claude with daily context to produce a structured JSON draft plan.
 
 import json
 import logging
-from .runtime import AgentRuntime
-from .schemas import Draft
-from .config import Config
+from pathlib import Path
+
+from pydantic import ValidationError
+
+from scripts.config import Config
+from scripts.runtime import AgentRuntime
+from scripts.schemas import Draft
 
 logger = logging.getLogger(__name__)
 
@@ -30,25 +34,46 @@ def generate_draft(
         Validated draft dict
 
     Raises:
-        ValueError: If draft JSON invalid
-
-    TODO: Implement
-    - Load daily_template.md from vault/.system/config/
-    - Build system prompt with template
-    - Call runtime.call(system_prompt, context, max_tokens)
-    - Parse response as JSON
-    - Validate against Draft schema
-    - Return dict
+        FileNotFoundError: If template file not found
+        ValueError: If draft JSON parsing fails
+        ValidationError: If draft doesn't match schema
     """
-    # Placeholder: return empty draft
-    return {
-        "schema_version": 1,
-        "date": "TODO",
-        "generated_at": "TODO",
-        "news": [],
-        "schedule": [],
-        "tomorrow_preview": [],
-        "tasks": [],
-        "training": {"summary": "TODO"},
-        "agent_suggestions": [],
-    }
+    # 1. Load system prompt template
+    template_path = Path(config.vault_path) / ".system" / "config" / config.planner_prompt_path
+    if not template_path.exists():
+        raise FileNotFoundError(f"Prompt template not found: {template_path}")
+
+    try:
+        system_prompt = template_path.read_text()
+    except Exception as e:
+        logger.error(f"Failed to read template: {e}")
+        raise FileNotFoundError(f"Could not read template: {template_path}") from e
+
+    # 2. Call agent runtime with system prompt and context
+    try:
+        response = runtime.call(
+            system_prompt=system_prompt,
+            user_message=context,
+            max_tokens=config.agent_max_tokens,
+        )
+    except Exception as e:
+        logger.error(f"Agent runtime call failed: {e}")
+        raise RuntimeError(f"Failed to call agent: {e}") from e
+
+    # 3. Parse response as JSON
+    try:
+        parsed = json.loads(response)
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to parse agent response as JSON: {e}")
+        logger.debug(f"Response was: {response[:200]}...")
+        raise ValueError(f"Agent response is not valid JSON: {e}") from e
+
+    # 4. Validate against Draft schema
+    try:
+        draft = Draft.model_validate(parsed)
+    except ValidationError as e:
+        logger.error(f"Draft schema validation failed: {e}")
+        raise ValueError(f"Agent response doesn't match Draft schema: {e}") from e
+
+    # 5. Return as dict
+    return draft.model_dump()
