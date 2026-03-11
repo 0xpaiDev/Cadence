@@ -448,6 +448,51 @@ All 140 Phase 1-7 tests remain passing ✅
 - All known bugs from Phase 8 testing fixed during rebuild
 - Ready for end-to-end testing with real API data
 
+## Bug Fixes — Session 10 (2026-03-11)
+**Goal:** Fix schedule display and task approval flow bugs discovered during webapp testing.
+
+**Issues Found & Fixed:**
+1. **Schedule items hidden after event time passed**
+   - Root cause: `ScheduleTimeline.tsx` filtered `eventTime > now` to hide past events
+   - Fix: Removed past-event filter; Morning Review shows all events regardless of time
+   - Rationale: Morning Review is a planning screen, not a live tracker
+
+2. **Tomorrow preview events missing times**
+   - Root cause: Field name mismatch — Pydantic `CalendarTomorrowEvent.start` vs TypeScript `time_start`
+   - Fix: Updated `types.ts` to use `start?` field; normalized `start → time_start` in merge
+   - Impact: Tomorrow events now display with proper time ranges (e.g., "6:15 AM → 1:00 PM")
+
+3. **`formatTime()` breaking on `"HH:MM"` strings**
+   - Root cause: Function did `new Date("09:30")` → Invalid Date. Expected ISO 8601 strings
+   - Fix: Added regex check for `HH:MM` format; parse manually before falling back to `new Date()`
+   - Impact: All schedule times now render correctly in 12-hour format
+
+4. **Task approval not transitioning to Active Day screen**
+   - Root cause: Query cache race condition — `invalidateQueries()` scheduled async refetch but returned immediately
+   - Fix: Return promise from `onSuccess` so mutation waits for refetch to complete
+   - Impact: Button stays in loading state until refetch finishes; screen transitions instantly when data arrives
+
+**Files Changed:**
+- `webapp/src/features/schedule/ScheduleTimeline.tsx` — Remove filter, normalize fields
+- `webapp/src/types.ts` — Fix `CalendarTomorrowEvent.start` field
+- `webapp/src/shared/utils.ts` — Handle `HH:MM` format
+- `webapp/src/features/approve/ApproveBanner.tsx` — Wait for refetch before clearing loading state
+
+**Build & Verification:**
+```
+✅ make webapp-build — TypeScript compiles, Vite bundles (no errors)
+✅ API endpoints tested — schedule, tomorrow_preview, tasks all return correct data
+✅ Draft → Approve flow tested — 3 sample tasks correctly transferred to active day
+✅ All changes committed: "Fix schedule display and task approval flow bugs"
+```
+
+**Test Results:**
+```
+140 passed in 1.47s ✅
+(All Phase 1-7 tests remain passing; no new tests added for webapp)
+```
+
 ## Blockers / Notes
-- None. Phases 0–8.1 complete.
-- Next: Phase 9 (Automation + Hardening) — Cron setup, systemd service, Syncthing config, deployment guide
+- None. Phases 0–8.1 complete + bug fixes.
+- Next: Phase 8.2 (E2E Testing) — Real webapp testing on phone/browser with all 4 screens
+- Then: Phase 9 (Automation + Hardening) — Cron setup, systemd service, Syncthing config, deployment

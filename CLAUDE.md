@@ -53,13 +53,19 @@ Webapp served as static files at `/app`.
 
 ### Webapp (webapp/)
 
-Single HTML file (SPA), vanilla JS, no build step.
+**Phase 8.1+: React 18 + TypeScript + Tailwind + Vite build (replaced vanilla JS)**
+- Modern SPA with feature-first component architecture
+- TanStack Query for data fetching and cache management
+- Instant data refresh on mutations (no `location.reload()`)
+- TypeScript strict mode, full type safety
 
 **Screens:**
-- **Morning:** Draft review, news cards, schedule, tasks, training, negotiation chat, approve button
-- **Daytime:** Task checklist with complete/drop/defer/notes, remaining schedule, day stats
+- **No Draft:** "Waiting for draft" empty state (during morning pipeline)
+- **Morning Review:** Draft review, news cards, schedule, tomorrow preview, tasks, training, negotiation chat, approve button
+- **Active Day:** Task checklist with complete/drop/defer/notes, remaining schedule, day stats, inline task add, negotiation still available
+- **Completed:** Celebration screen
 
-**Interactions:** All hit API immediately, no save button. State server-authoritative.
+**Interactions:** All hit API immediately, no save button. State server-authoritative. Mutations instantly update UI via query invalidation.
 
 ### Vault Structure
 
@@ -422,18 +428,23 @@ make push MSG="..."    # Push commits to origin
 
 ## Next Session
 
-After Phase 8.1 (React webapp redesign), the next session will:
+**Session 10 Status (Just Completed):**
+- ✅ Fixed 4 webapp bugs (schedule, times, approval flow)
+- ✅ All changes committed and tested
+- ✅ Webapp ready for proper E2E testing
 
-**Option 1: Phase 8.1 Testing**
-1. End-to-end test the new React webapp with real API data
-2. Test all 4 screens: No Draft, Morning Review, Active Day, Completed
-3. Test negotiation chat (Collie button → slide-up panel → mutate draft)
-4. Test task CRUD (complete, drop with reason, defer)
-5. Test approve (SEND IT → instant screen transition to Active Day)
-6. Fix any rendering or interaction bugs found
-7. Mobile responsiveness check on real phone
+**Session 11 Plan: Phase 8.2 (E2E Testing + Polish)**
+1. Comprehensive testing of all 4 screens with real API data
+   - No Draft → Morning Review → Active Day → Completed
+   - All transitions and data flows
+2. Negotiation chat testing (Collie button → mutations → refetch)
+3. Task CRUD (complete, drop with reason, defer, add ad-hoc)
+4. Approval flow (SEND IT → instant transition + tasks display)
+5. Mobile responsiveness on real phone (landscape/portrait)
+6. Browser DevTools inspection for errors/warnings
+7. Document any remaining UX improvements
 
-**Option 2: Phase 9 (Automation + Hardening)**
+**Phase 9 (Automation + Hardening) After E2E Passes:**
 1. Cron setup: `0 6 * * * cd /home/shu/cadence && make pipeline`
 2. Systemd service: create `/etc/systemd/system/cadence-api.service`
 3. Syncthing configuration for vault syncing
@@ -443,7 +454,45 @@ After Phase 8.1 (React webapp redesign), the next session will:
 **Current project status:**
 - Phases 0–7: Complete ✅ (all Python backend + API server + negotiation)
 - Phase 8.1: Complete ✅ (React SPA redesign with modern stack)
+- **Bug Fixes: Complete ✅** (schedule, times, approval flow fixed)
+- Phase 8.2: Next (E2E testing + polish)
 - Phase 9–10: Pending (automation, stabilization, production rollout)
+
+## ⚠️ Gotchas & Known Issues
+
+### Webapp Data Flow Gotchas
+
+**1. Schedule time format handling**
+- **Issue:** Draft stores schedule `time_start` as `"HH:MM"` (e.g., `"09:30"`), NOT ISO 8601 datetimes
+- **Gotcha:** `new Date("09:30")` → Invalid Date. Must detect `HH:MM` pattern and parse manually
+- **Fix:** `formatTime()` in `utils.ts` checks regex `^\d{1,2}:\d{2}$` before calling `new Date()`
+- **Lesson:** Time-only strings are ambiguous. Document format in schemas (Done: `# HH:MM` comment added)
+
+**2. Tomorrow preview field naming inconsistency**
+- **Issue:** Pydantic `CalendarTomorrowEvent` uses field `start: str` but TypeScript interface had `time_start?: string`
+- **Gotcha:** API serializes `start` but frontend expected `time_start` → data always `undefined`
+- **Fix:** TypeScript interface updated to match Pydantic schema. Normalize in component merge: `time_start: e.start`
+- **Lesson:** After Pydantic schema changes, verify TypeScript types are in sync. Consider auto-generating types from Pydantic
+
+**3. Past-event filtering in Morning Review**
+- **Issue:** `ScheduleTimeline.tsx` filtered events with `eventTime > now` to hide past events
+- **Gotcha:** Morning Review is a planning screen, not a live tracker. If viewed after 9:00 AM, all morning events hidden
+- **Fix:** Removed the filter entirely. Show all events in Morning Review; past filtering only makes sense on Active Day
+- **Lesson:** Question filtering logic — what's the intended use case? Don't assume "past = hidden"
+
+**4. Query cache race condition in mutation callback**
+- **Issue:** `onSuccess: () => queryClient.invalidateQueries()` schedules async refetch but returns immediately
+- **Gotcha:** Old data still in cache while refetch pending → old screen renders briefly → race condition
+- **Fix:** Return the promise from `refetchQueries()` so mutation loading state persists until refetch completes
+- **Lesson:** In React Query, returning a promise from `onSuccess` makes the mutation wait. Use this for cache coherency
+
+### API Response Structure Gotchas
+
+**5. `ApproveResponse` doesn't include plan/schedule**
+- **Issue:** `POST /api/approve` returns only `{ status, note_path, tasks }`, not the full plan
+- **Gotcha:** Can't eagerly update cache with just this response; must refetch `/api/today` to get active plan
+- **Fix:** Refetch after approve succeeds. API design: consider returning full plan on mutations that transition state
+- **Lesson:** Mutation responses should include everything needed to update the cache without a refetch
 
 ## 💡 Learning & Patterns
 - Document surprising patterns or common mistakes here to help future sessions.
