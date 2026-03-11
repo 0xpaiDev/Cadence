@@ -11,6 +11,7 @@ class Config:
     """Cadence configuration."""
     # Vault
     vault_path: str
+    google_credentials_path: str  # Path to OAuth2 client secrets JSON
 
     # Fetch
     cron_hour: int
@@ -67,6 +68,10 @@ def load_config(path: str = "cadence.toml") -> Config:
 
     return Config(
         vault_path=vault_cfg.get("path", "/home/shu/vault"),
+        google_credentials_path=vault_cfg.get(
+            "google_credentials_path",
+            str(Path(vault_cfg.get("path", "/home/shu/vault")) / ".system" / "config" / "google_credentials.json")
+        ),
         cron_hour=fetch_cfg.get("cron_hour", 6),
         max_state_age_hours=fetch_cfg.get("max_state_age_hours", 2),
         token_budget=context_cfg.get("token_budget", 2000),

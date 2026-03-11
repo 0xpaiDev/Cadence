@@ -318,6 +318,46 @@ level = "INFO"
 - All tests pass before merge
 - Code review for API/agent changes
 
+## Developer Commands
+
+All commands run via `make` targets. Pre-authorized for Claude to execute without prompts.
+
+### Testing
+```bash
+make test              # Fast tests (excludes slow agent calls)
+make test-all          # All tests including slow tests
+make test-schema       # Schema validation tests only
+make test-context      # Context builder tests
+make test-fetch        # Fetcher tests
+make test-agent        # Agent output tests
+make test-api          # API endpoint tests
+make test-negotiate    # Negotiation session tests
+make test-tasks        # Task + day lifecycle tests
+```
+
+### Pipeline & Data Fetching
+```bash
+make fetch             # Run all fetchers (news + calendar)
+make pipeline          # Full pipeline: fetch → context → draft
+make check-state       # Check state file freshness
+make init-vault        # Initialize vault directory structure
+```
+
+### Server & API
+```bash
+make serve             # Start API server (dev mode with --reload)
+make serve-prod        # Start API server (production)
+```
+
+### Maintenance
+```bash
+make lint              # Type checking (mypy + ruff)
+make clean             # Remove build artifacts and caches
+make install           # Install dev dependencies
+make commit            # Stage and commit changes (prompts for message)
+make push MSG="..."    # Push commits to origin
+```
+
 ## Key Files to Reference During Implementation
 
 | Phase | Files |
@@ -394,3 +434,30 @@ After Phase 1 is done and tested, subsequent sessions will follow phases 2-10 se
 - **Conflict Resolution:** If agents disagree on file placement or API design, the Lead Agent defaults to the architecture defined in this CLAUDE.md and the phased plan in IMPLEMENTATION_PLAN.md.
 - **Agent Scope:** Each agent should own a single phase or a clearly bounded file set. Avoid agents touching files outside their stated scope without flagging it.
 - **State Invariant:** VPS writes only to `vault/.system/`. Never let an agent write user-facing files (Daily/, data/) except through the `POST /api/approve` code path.
+
+## 🔓 Pre-Authorized Commands for Claude
+
+Claude may execute the following commands without asking for permission:
+
+### Testing & Validation
+- Run all test commands (`make test`, `make test-all`, `make test-*`)
+- Run linting and type checks (`make lint`)
+- Install dependencies (`make install`)
+
+### Development Workflow
+- Run the full pipeline (`make pipeline`, `make fetch`)
+- Start the API server in dev or prod mode (`make serve`, `make serve-prod`)
+- Initialize vault structure (`make init-vault`)
+- Check system state (`make check-state`)
+
+### Python Script Execution
+- Execute any Python modules under `scripts/` (e.g., `python -m scripts.build_context`)
+- Execute any test modules (e.g., `pytest tests/test_*.py`)
+- Run configuration checks and utilities
+
+### Git Operations
+- Commit changes with descriptive messages
+- Push commits to the main branch
+- View git status and logs
+
+**Authorization scope:** These commands are pre-approved for development and testing in this repository. Claude will NOT prompt for permission before running them.

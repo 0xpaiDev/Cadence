@@ -16,6 +16,7 @@ def config():
     """Provide test configuration."""
     return Config(
         vault_path="/tmp/test_vault",
+        google_credentials_path="/tmp/test_vault/.system/config/google_credentials.json",
         cron_hour=6,
         max_state_age_hours=2,
         token_budget=2000,
