@@ -231,6 +231,23 @@ def sample_decisions():
     }
 
 
+@pytest.fixture
+def api_client(vault_path, config, monkeypatch):
+    """Provide TestClient with vault wired to tmp_path vault."""
+    import dataclasses
+
+    from fastapi.testclient import TestClient
+
+    import api.routes as routes_module
+    from api.server import create_app
+
+    cfg = dataclasses.replace(config, vault_path=vault_path)
+    routes_module.get_config.cache_clear()
+    monkeypatch.setattr(routes_module, "get_config", lambda: cfg)
+
+    return TestClient(create_app())
+
+
 # TODO: Add more fixtures
 # - malformed JSON files (done: calendar_state_malformed.json, news_state_malformed.json)
 # - old schema version files (done: calendar_state_v0.json)

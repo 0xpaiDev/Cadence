@@ -9,7 +9,8 @@ _Updated at the end of each session. Read this first at the start of every sessi
 - Phase 3: Complete ✅ (calendar fetcher + Google OAuth)
 - Phase 4: Complete ✅ (news fetcher + RSS)
 - Phase 5: Complete ✅ (agent + pipeline)
-- Phase 6: Ready to start (API server)
+- Phase 6: Complete ✅ (API server + endpoints)
+- Phase 7: Ready to start (negotiation)
 
 ## Phase 1 Summary (Session 2)
 **Goal:** Implement all Pydantic models, create test infrastructure, write 20+ assertions.
@@ -208,6 +209,75 @@ _Updated at the end of each session. Read this first at the start of every sessi
 - Pipeline orchestration: graceful degradation (fetch fails but pipeline continues)
 - Full fetch → context → draft pipeline end-to-end functional
 
+## Phase 6 Summary (Session 7)
+**Goal:** Implement FastAPI server with all 6 endpoints, 20+ test assertions.
+
+**Completed:**
+- `api/negotiation.py` — Fixed broken relative import (`from ..scripts.runtime` → `from scripts.runtime`)
+- `api/server.py` — Full FastAPI app factory:
+  - CORS middleware with `allowed_origins` from config
+  - Static file mount at `/app` (try/except — webapp/ doesn't exist until Phase 8)
+  - Lifespan handler (validates vault path on startup, logs warning if missing)
+  - Router registered from `api/routes.py`
+- `api/routes.py` — All 6 endpoints implemented:
+  - `GET /api/today` — Reads day_state → branches on status (no_draft / draft / active / completed)
+  - `POST /api/negotiate` — Phase 6 stub: advances day_state to NEGOTIATING, returns placeholder
+  - `POST /api/approve` — Loads draft → builds DayTasks → writes `Daily/YYYY-MM-DD.md` → sets ACTIVE
+  - `POST /api/tasks` — Creates AD_HOC task, writes tasks_today.json
+  - `POST /api/tasks/{id}` — complete/drop/defer via DayTasks mutations, 404/422 on errors
+  - `GET /api/status` — File mtime freshness check, day status, errors list
+  - `@lru_cache get_config()` — Monkeypatch-friendly config injection for tests
+  - `_load()` typed wrapper — Fixes mypy inference from `load_state()` → `Optional[T]`
+  - `_render_daily_note()` — Renders Draft as Obsidian markdown (inline, no external template)
+- `tests/conftest.py` — Added `api_client` fixture (TestClient + monkeypatching)
+- `tests/test_task_lifecycle.py` — **7 DayTasks mutation assertions**:
+  - complete() sets COMPLETED + completed_at ISO timestamp
+  - drop() requires non-empty reason (raises ValueError)
+  - drop() records drop_reason
+  - defer() sets DEFERRED + deferred_to
+  - complete() on DROPPED task raises ValueError
+  - add() creates AD_HOC PENDING task
+- `tests/test_day_lifecycle.py` — **6 DayState transition assertions**:
+  - Initial status is DRAFT_PENDING
+  - NEGOTIATING transition preserves date
+  - ACTIVE transition with approved_at round-trips through model_dump
+  - COMPLETED transition round-trips
+  - model_dump() serializes status as string (not enum object)
+  - Full JSON round-trip via model_dump_json → model_validate
+- `tests/test_api.py` — **8 HTTP assertions** via TestClient:
+  - GET /api/today → no_draft when vault empty
+  - GET /api/today → status="draft" with draft_pending day_state
+  - GET /api/today → status="active" with active day_state + tasks
+  - POST /api/tasks → creates task with source="ad_hoc"
+  - POST /api/tasks/{id} complete → task status="completed"
+  - POST /api/tasks/{id} drop without reason → 422
+  - GET /api/status → returns calendar_fresh, news_fresh, day_status keys
+  - POST /api/approve → returns status="approved", Daily note written to disk
+- Learning material: `learning/phase6-api-server.md` — 8 topics, 300+ lines
+
+**Test Results:**
+```
+124 passed in 1.17s ✅
+  - API endpoints: 8 new tests ✅
+  - Task lifecycle: 7 new tests ✅
+  - Day lifecycle: 6 new tests ✅
+  - Agent output: 11 tests (unchanged) ✅
+  - Pipeline: 10 tests (unchanged) ✅
+  - News fetcher: 10 tests (unchanged) ✅
+  - Calendar fetcher: 8 tests (unchanged) ✅
+  - Context builder: 13 tests (unchanged) ✅
+  - Schemas: 49 tests (unchanged) ✅
+  - Placeholders: 2 tests ✅
+```
+
+**Key Achievements:**
+- Full API layer operational — `make serve` starts on port 8420 with all 6 routes registered
+- `@lru_cache` + `monkeypatch.setattr` pattern for test config injection (no DI framework needed)
+- `_load()` typed wrapper fixes mypy inference gap from `load_state()` returning `Optional[BaseModel]`
+- Approve endpoint fully works without NegotiationSession — Phase 7 adds full negotiation
+- File mtime freshness check (simpler than parsing `fetched_at` from JSON)
+- Static mount try/except ensures server starts even before webapp/ exists
+
 ## Blockers / Notes
-- None. Phases 0–5 complete.
-- Next: Phase 6 (API Server) — FastAPI with 6 endpoints (today, negotiate, approve, tasks, status, health)
+- None. Phases 0–6 complete.
+- Next: Phase 7 (Negotiation) — `NegotiationSession` class, full `POST /api/negotiate`, `<changes>` XML extraction, draft mutations, decisions logging

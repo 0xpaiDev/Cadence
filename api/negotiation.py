@@ -6,7 +6,7 @@ Handles agent-mediated conversation to refine the daily plan.
 
 import logging
 
-from ..scripts.runtime import AgentRuntime
+from scripts.runtime import AgentRuntime
 
 logger = logging.getLogger(__name__)
 
