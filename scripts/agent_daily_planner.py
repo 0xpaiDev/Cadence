@@ -60,20 +60,31 @@ def generate_draft(
         logger.error(f"Agent runtime call failed: {e}")
         raise RuntimeError(f"Failed to call agent: {e}") from e
 
-    # 3. Parse response as JSON
+    # 3. Strip markdown code blocks if present
+    response = response.strip()
+    if response.startswith("```"):
+        # Remove ```json or ``` prefix
+        response = response.split("\n", 1)[1] if "\n" in response else response[3:]
+    if response.endswith("```"):
+        # Remove trailing ```
+        response = response.rsplit("\n", 1)[0] if "\n" in response else response[:-3]
+    response = response.strip()
+
+    # 4. Parse response as JSON
+    logger.debug(f"Agent response (first 500 chars): {response[:500]}")
     try:
         parsed = json.loads(response)
     except json.JSONDecodeError as e:
         logger.error(f"Failed to parse agent response as JSON: {e}")
-        logger.debug(f"Response was: {response[:200]}...")
+        logger.error(f"Full response was: {response}")
         raise ValueError(f"Agent response is not valid JSON: {e}") from e
 
-    # 4. Validate against Draft schema
+    # 5. Validate against Draft schema
     try:
         draft = Draft.model_validate(parsed)
     except ValidationError as e:
         logger.error(f"Draft schema validation failed: {e}")
         raise ValueError(f"Agent response doesn't match Draft schema: {e}") from e
 
-    # 5. Return as dict
+    # 6. Return as dict
     return draft.model_dump()

@@ -1,0 +1,198 @@
+================================================================================
+CADENCE WEBAPP MANUAL TEST RESULTS — 2026-03-11
+================================================================================
+
+EXECUTION: Playwright CLI automated browser testing on all 4 screens
+DURATION: ~2 minutes automated testing
+COVERAGE: 100% of screen states (draft_pending, active, completed, no_draft)
+RESULTS: 4/4 tests PASS ✅
+
+================================================================================
+QUICK FINDINGS
+================================================================================
+
+✅ PASSING TESTS:
+  • Test A: Active Day Screen — all elements render, no crashes
+  • Test B: No Draft Screen — fallback message displays correctly
+  • Test C: Morning Review Screen — news, schedule, negotiate UI present
+  • Test D: Completed Screen — completion state transitions properly
+
+🔴 CRITICAL BUGS FOUND (Fix First):
+  1. News source field shows as "undefined" (template uses wrong schema field)
+  2. Schedule times not formatted (formatTime() defined but never called)
+
+🟡 FUNCTIONAL BUGS (Lower Priority):
+  3. Add task pre-approval fails silently (409 error, tasks_today.json missing)
+  4. Drop task uses window.prompt() (not mobile-friendly)
+  5. Defer always goes to "tomorrow" (no UI for backlog/custom dates)
+  6. Negotiation only refreshes task list (not news/schedule sections)
+  7. Status endpoint never called (no system health display)
+
+================================================================================
+DETAILED BREAKDOWN
+================================================================================
+
+TEST A: ACTIVE DAY SCREEN ✅
+  Page State: Day already approved, 4 tasks (1 dropped, 3 pending)
+  Renders: ✅ Date header, stats (0/3/0/1), task list, action buttons
+  Issues: None critical — all elements visible and styled correctly
+  Screenshot: 01-active-day-initial.png
+
+TEST B: NO DRAFT SCREEN ✅
+  Page State: No draft available (day_state.json date: 1999-01-01)
+  Renders: ✅ "Waiting for Today's Plan" message, refresh button
+  Issues: None — appropriate fallback UI
+  Screenshot: 02-no-draft-screen.png
+
+TEST C: MORNING REVIEW SCREEN ✅
+  Page State: Draft pending approval (status: draft_pending)
+  Renders: ✅ News briefing, schedule, negotiate chat, approve button
+  Issues: 
+    ⚠️  News source field blank (template has item.source, schema has topic)
+    ⚠️  Schedule times raw ISO strings (should be HH:MM via formatTime())
+  Screenshot: 03-morning-review-screen.png
+
+TEST D: COMPLETED SCREEN ✅
+  Page State: Day marked complete (status: completed)
+  Renders: ✅ "Day Complete" message, refresh button
+  Issues: None — state transitions working
+  Screenshot: 04-completed-screen.png
+
+================================================================================
+WHAT'S WORKING WELL
+================================================================================
+
+✅ Page Load:
+   - No JavaScript errors (only missing favicon, harmless)
+   - CSS responsive layout loads correctly
+   - All 4 screens render without crashes
+
+✅ Layout & Navigation:
+   - All UI sections present on correct screens
+   - Mobile-first responsive design working
+   - State transitions (no draft → morning → active → completed) function
+
+✅ Data Display:
+   - Task names, priorities, badges display correctly
+   - Stats counters show accurate counts
+   - Form inputs and buttons are interactive
+   - Date header shows correctly
+
+✅ API Integration:
+   - GET /api/today routing works (correct screen per state)
+   - State file changes reflected immediately (no cache issues)
+   - Form submission endpoints connected (though some have issues)
+
+================================================================================
+BUGS REQUIRING FIXES
+================================================================================
+
+[🔴 CRITICAL] Bug #1: News source field undefined
+  File: webapp/app.js line 288 (news template)
+  Issue: Template references {{item.source}} but Draft schema field is "topic"
+  Symptom: News card shows blank in source position
+  Effort: 15 minutes
+  Priority: HIGH (user-visible rendering error)
+
+[🔴 CRITICAL] Bug #2: formatTime() unused
+  File: webapp/app.js line 50-55 defined, not called in schedule render
+  Issue: Schedule times display as "2026-03-11T14:00:00Z" instead of "2:00 PM"
+  Symptom: Hard to read schedule times
+  Effort: 30 minutes
+  Priority: HIGH (poor UX)
+
+[🟡 MEDIUM] Bug #3: Add task pre-approval returns 409
+  File: api/routes.py (POST /api/tasks)
+  Issue: Endpoint requires tasks_today.json which doesn't exist until approval
+  Symptom: Add task button visible on morning screen but fails when clicked
+  Fix Option A: Create empty tasks_today.json during draft generation
+  Fix Option B: Disable add task form until after approval
+  Effort: 1 hour
+  Priority: MEDIUM (form visible but non-functional)
+
+[🟡 MEDIUM] Bug #4: Drop task uses window.prompt()
+  File: webapp/app.js line 710
+  Issue: Browser native dialog not mobile-friendly, no validation
+  Symptom: Awkward UX on phone, no cancel button
+  Fix: Implement custom modal dialog
+  Effort: 1.5 hours
+  Priority: MEDIUM (works but poor UX)
+
+[🟡 MEDIUM] Bug #5: Defer hardcoded to "tomorrow"
+  File: webapp/app.js line 718 (defer_to: "tomorrow" hardcoded)
+  Issue: API supports defer to backlog/custom dates but UI only offers tomorrow
+  Symptom: Users can't defer tasks to backlog or future dates
+  Fix: Add select menu or modal for defer target
+  Effort: 2 hours
+  Priority: LOW (limited use case, default works)
+
+[🟡 MEDIUM] Bug #6: Negotiation only refreshes tasks
+  File: webapp/app.js line 580 (updateDraftDisplay)
+  Issue: After agent response, only task list updates; not news/schedule
+  Symptom: If agent mutates schedule/news, changes don't appear until reload
+  Fix: Re-render all draft sections
+  Effort: 1 hour
+  Priority: LOW (full reload is workaround)
+
+[ℹ️ LOW] Bug #7: /api/status never called
+  File: webapp/app.js (no GET /api/status calls)
+  Issue: Status endpoint exists but webapp ignores it
+  Symptom: No freshness indicators (calendar/news dates) shown to user
+  Fix: Call /api/status on load; display timestamps and health
+  Effort: 1.5 hours
+  Priority: LOW (nice to have)
+
+================================================================================
+RECOMMENDED FIX PRIORITY
+================================================================================
+
+Session 1 (1.5 hours):
+  ✓ Bug #1: Fix news source field (item.topic) — 15 min
+  ✓ Bug #2: Call formatTime() on schedule times — 30 min
+  ✓ Bug #3: Create tasks_today.json on draft OR disable form — 45 min
+
+Session 2 (3 hours):
+  ✓ Bug #4: Replace window.prompt() with modal — 1.5 hours
+  ✓ Bug #5: Add defer target UI (select/modal) — 1.5 hours
+
+Session 3 (1 hour):
+  ✓ Bug #6: Re-render all sections after negotiation — 1 hour
+  ✓ Bug #7: Add status/health display — 1.5 hours (optional)
+
+================================================================================
+ARTIFACTS
+================================================================================
+
+Screenshots from tests:
+  • 01-active-day-initial.png — Active day screen, full page
+  • 02-no-draft-screen.png — No draft fallback UI
+  • 03-morning-review-screen.png — Morning review draft state
+  • 04-completed-screen.png — Completion state
+  • 05-detailed-active-day.png — Active day with text content
+
+Full Report:
+  • WEBAPP_TEST_REPORT.md — Detailed findings with code references
+
+================================================================================
+CONCLUSION
+================================================================================
+
+✅ Webapp is FUNCTIONAL:
+   - All 4 screens load and render correctly
+   - No JavaScript crashes or fatal errors
+   - API integration working (state routing, form submission)
+   - Mobile-responsive layout loads correctly
+
+⚠️  BUT NOT PRODUCTION READY:
+   - 2 critical rendering bugs (news source, time format)
+   - 5 UX/functional limitations (prompts, defer options, etc.)
+   - Total of ~8 hours of fixes needed for MVP quality
+
+🎯 NEXT STEPS:
+   1. Fix the 2 critical bugs first (1.5 hours)
+   2. Fix the 3 medium bugs (4.5 hours)
+   3. Consider the 2 low-priority bugs (2.5 hours, optional)
+   4. Test fixes with Playwright again
+   5. Manual testing on real phone before launch
+
+================================================================================

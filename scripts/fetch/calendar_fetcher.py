@@ -58,7 +58,7 @@ class CalendarFetcher:
                     flow = InstalledAppFlow.from_client_secrets_file(
                         self._credentials_path, SCOPES
                     )
-                    credentials = flow.run_local_server(port=0)
+                    credentials = flow.run_local_server(port=8080, open_browser=True)
                     self._save_token(credentials)
                 except Exception as e:
                     logger.error(f"Interactive authorization failed: {e}")
@@ -140,7 +140,7 @@ class CalendarFetcher:
 
     def _fetch_events_for_date(self, date_str: str, max_results: int = 250) -> list:
         """
-        Fetch events for a specific date.
+        Fetch events for a specific date from all calendars.
 
         Args:
             date_str: ISO date string (YYYY-MM-DD)
@@ -159,56 +159,69 @@ class CalendarFetcher:
         time_min = f"{date_str}T00:00:00Z"
         time_max = f"{date_str}T23:59:59Z"
 
-        events_result = (
-            self._service.events()
-            .list(
-                calendarId="primary",
-                timeMin=time_min,
-                timeMax=time_max,
-                singleEvents=True,
-                orderBy="startTime",
-                maxResults=max_results,
-            )
-            .execute()
-        )
-
-        items = events_result.get("items", [])
         events = []
 
-        for item in items:
-            # Detect all-day event
-            if "date" in item.get("start", {}):
-                # All-day event
-                start = item["start"]["date"]
-                end = item["end"]["date"]
-                all_day = True
-            else:
-                # Timed event
-                start = item.get("start", {}).get("dateTime", "")
-                end = item.get("end", {}).get("dateTime", "")
-                all_day = False
+        # Get list of all calendars
+        try:
+            calendars_result = self._service.calendarList().list().execute()
+            calendar_ids = [cal["id"] for cal in calendars_result.get("items", [])]
+        except Exception as e:
+            logger.warning(f"Failed to list calendars, falling back to primary: {e}")
+            calendar_ids = ["primary"]
 
-            title = item.get("summary", "(No title)")
-            location = item.get("location")
-
-            # Determine if this is for tomorrow preview (max 5 items)
-            if max_results == 5:
-                # Create as CalendarTomorrowEvent
-                event = CalendarTomorrowEvent(
-                    title=title, start=start, all_day=all_day
-                )
-            else:
-                # Create as CalendarEvent
-                event = CalendarEvent(
-                    title=title,
-                    start=start,
-                    end=end,
-                    location=location,
-                    calendar="primary",
-                    all_day=all_day,
+        # Fetch events from each calendar
+        for calendar_id in calendar_ids:
+            try:
+                events_result = (
+                    self._service.events()
+                    .list(
+                        calendarId=calendar_id,
+                        timeMin=time_min,
+                        timeMax=time_max,
+                        singleEvents=True,
+                        orderBy="startTime",
+                        maxResults=max_results,
+                    )
+                    .execute()
                 )
 
-            events.append(event)
+                for item in events_result.get("items", []):
+                    # Detect all-day event
+                    if "date" in item.get("start", {}):
+                        # All-day event
+                        start = item["start"]["date"]
+                        end = item["end"]["date"]
+                        all_day = True
+                    else:
+                        # Timed event
+                        start = item.get("start", {}).get("dateTime", "")
+                        end = item.get("end", {}).get("dateTime", "")
+                        all_day = False
+
+                    title = item.get("summary", "(No title)")
+                    location = item.get("location")
+
+                    # Determine if this is for tomorrow preview (max 5 items)
+                    if max_results == 5:
+                        # Create as CalendarTomorrowEvent
+                        event = CalendarTomorrowEvent(
+                            title=title, start=start, all_day=all_day
+                        )
+                    else:
+                        # Create as CalendarEvent
+                        event = CalendarEvent(
+                            title=title,
+                            start=start,
+                            end=end,
+                            location=location,
+                            calendar=calendar_id,
+                            all_day=all_day,
+                        )
+
+                    events.append(event)
+            except Exception as e:
+                logger.warning(f"Failed to fetch events from calendar {calendar_id}: {e}")
+                continue
 
         return events
 

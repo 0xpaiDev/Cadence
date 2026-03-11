@@ -1,0 +1,9 @@
+{
+  "defaultSession": "cadence",
+  "browser": {
+    "browserName": "chromium",
+    "launchOptions": {
+      "channel": "chromium"
+    }
+  }
+}

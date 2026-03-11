@@ -1,0 +1,55 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - heading "Wed, Mar 11" [level=1] [ref=e4]
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - strong [ref=e7]: "0"
+        - text: completed
+      - generic [ref=e8]:
+        - strong [ref=e9]: "3"
+        - text: remaining
+      - generic [ref=e10]:
+        - strong [ref=e11]: "0"
+        - text: deferred
+      - generic [ref=e12]:
+        - strong [ref=e13]: "1"
+        - text: dropped
+    - button "🔄 Refresh" [ref=e14] [cursor=pointer]
+  - generic [ref=e15]:
+    - heading "✓ Tasks" [level=3] [ref=e16]
+    - generic [ref=e17]:
+      - generic [ref=e19]:
+        - paragraph [ref=e20]: Review pull requests
+        - generic [ref=e21]: high
+        - generic [ref=e22]: "Dropped: Not a priority today"
+      - generic [ref=e23]:
+        - generic [ref=e24]:
+          - paragraph [ref=e25]: Update documentation
+          - generic [ref=e26]: normal
+        - generic [ref=e27]:
+          - button "✓" [ref=e28] [cursor=pointer]
+          - button "✕" [ref=e29] [cursor=pointer]
+          - button "→" [ref=e30] [cursor=pointer]
+      - generic [ref=e31]:
+        - generic [ref=e32]:
+          - paragraph [ref=e33]: Prepare presentation
+          - generic [ref=e34]: high
+        - generic [ref=e35]:
+          - button "✓" [ref=e36] [cursor=pointer]
+          - button "✕" [ref=e37] [cursor=pointer]
+          - button "→" [ref=e38] [cursor=pointer]
+      - generic [ref=e39]:
+        - generic [ref=e40]:
+          - paragraph [ref=e41]: Respond to emails
+          - generic [ref=e42]: low
+        - generic [ref=e43]:
+          - button "✓" [ref=e44] [cursor=pointer]
+          - button "✕" [ref=e45] [cursor=pointer]
+          - button "→" [ref=e46] [cursor=pointer]
+    - generic [ref=e47]:
+      - textbox "Add a task..." [ref=e48]
+      - combobox [ref=e49]:
+        - option "Low"
+        - option "Normal" [selected]
+        - option "High"
+      - button "Add" [ref=e50] [cursor=pointer]

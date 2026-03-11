@@ -198,6 +198,8 @@ class NegotiationSession:
         - drop_task: remove task by id
         - add_task: append new task
         - reprioritize_task: change task priority
+        - reschedule_event: move event to new time
+        - add_task_notes: add/update notes on task
 
         Args:
             actions: List of action dicts from agent
@@ -235,6 +237,40 @@ class NegotiationSession:
                         if task["id"] == task_id:
                             task["priority"] = priority
                             logger.debug(f"Reprioritized task {task_id} to {priority}")
+                            break
+
+            elif action_type == "reschedule_event":
+                event_id = action.get("event_id")
+                new_time_start = action.get("time_start")
+                if event_id and new_time_start:
+                    for event in self.draft.get("schedule", []):
+                        if event["id"] == event_id:
+                            event["time_start"] = new_time_start
+                            # Update end time if duration provided
+                            if "duration_minutes" in action:
+                                duration = action["duration_minutes"]
+                                # Simple time arithmetic (assumes HH:MM format)
+                                try:
+                                    start_h, start_m = map(int, new_time_start.split(":"))
+                                    end_h = start_h + duration // 60
+                                    end_m = start_m + duration % 60
+                                    if end_m >= 60:
+                                        end_h += 1
+                                        end_m -= 60
+                                    event["time_end"] = f"{end_h:02d}:{end_m:02d}"
+                                except (ValueError, TypeError):
+                                    pass
+                            logger.debug(f"Rescheduled event {event_id} to {new_time_start}")
+                            break
+
+            elif action_type == "add_task_notes":
+                task_id = action.get("task_id")
+                notes = action.get("notes", "")
+                if task_id:
+                    for task in self.draft.get("tasks", []):
+                        if task["id"] == task_id:
+                            task["notes"] = notes
+                            logger.debug(f"Added notes to task {task_id}")
                             break
 
             else:

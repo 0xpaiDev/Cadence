@@ -53,3 +53,8 @@ logs/
 google_credentials.json
 *.pem
 *.key
+
+# Node / Webapp
+webapp/node_modules/
+webapp/dist/
+webapp/.turbo/

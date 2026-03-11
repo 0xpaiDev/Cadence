@@ -1,4 +1,4 @@
-.PHONY: help test test-all test-schema test-context test-fetch test-agent test-api test-negotiate test-tasks fetch pipeline serve serve-prod check-state lint init-vault install clean commit push
+.PHONY: help test test-all test-schema test-context test-fetch test-agent test-api test-negotiate test-tasks test-webapp fetch pipeline serve serve-prod check-state lint init-vault install clean commit push webapp-install webapp-build webapp-dev
 
 help:
 	@echo "Cadence Development Commands"
@@ -13,6 +13,7 @@ help:
 	@echo "  make test-api          API endpoint tests"
 	@echo "  make test-negotiate    Negotiation session tests"
 	@echo "  make test-tasks        Task + day lifecycle tests"
+	@echo "  make test-webapp       Launch browser for webapp testing (start server first)"
 	@echo ""
 	@echo "Pipeline:"
 	@echo "  make fetch             Run all fetchers now (news + calendar)"
@@ -63,11 +64,23 @@ test-negotiate:
 test-tasks:
 	pytest tests/test_task_lifecycle.py tests/test_day_lifecycle.py -v
 
+test-webapp:
+	playwright-cli open http://localhost:8420/app/ --headed
+
+webapp-install:
+	cd webapp && npm install
+
+webapp-build:
+	cd webapp && npm run build
+
+webapp-dev:
+	cd webapp && npm run dev
+
 fetch:
-	python -m scripts.fetch.fetch_all
+	python3 -m scripts.fetch.fetch_all
 
 pipeline:
-	python -m scripts.pipeline
+	python3 -m scripts.pipeline
 
 serve:
 	uvicorn api.server:app --host 0.0.0.0 --port 8420 --reload
@@ -76,7 +89,7 @@ serve-prod:
 	uvicorn api.server:app --host 0.0.0.0 --port 8420
 
 check-state:
-	python -c "import scripts.config; print('State files check: TODO')"
+	python3 -c "import scripts.config; print('State files check: TODO')"
 
 init-vault:
 	@echo "Initializing vault directory at ~/vault/"

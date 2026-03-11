@@ -1,0 +1,4 @@
+- generic [ref=e3]:
+  - heading "📊 Day Complete" [level=1] [ref=e4]
+  - paragraph [ref=e5]: Today's plan has been completed. Check your vault for the daily note.
+  - button "Refresh" [ref=e6] [cursor=pointer]

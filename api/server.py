@@ -54,9 +54,9 @@ def create_app() -> FastAPI:
     )
 
     try:
-        app.mount("/app", StaticFiles(directory="webapp", html=True), name="webapp")
+        app.mount("/app", StaticFiles(directory="webapp/dist", html=True), name="webapp")
     except RuntimeError:
-        logger.warning("webapp/ directory not found — static file serving disabled (Phase 8)")
+        logger.warning("webapp/dist/ directory not found — static file serving disabled (Phase 8)")
 
     app.include_router(router)
 

@@ -182,10 +182,31 @@ async def get_today() -> dict:
     if day_state.status == DayStatus.ACTIVE:
         draft = _load(_drafts_path(config), Draft)
         tasks = _load(_state(config, "tasks_today.json"), DayTasks)
+
+        # Calculate day stats
+        stats = {
+            "completed": 0,
+            "remaining": 0,
+            "deferred": 0,
+            "dropped": 0,
+        }
+        if tasks:
+            for task in tasks.tasks:
+                if task.status == TaskStatus.COMPLETED:
+                    stats["completed"] += 1
+                elif task.status == TaskStatus.DROPPED:
+                    stats["dropped"] += 1
+                elif task.status == TaskStatus.DEFERRED:
+                    stats["deferred"] += 1
+                else:
+                    stats["remaining"] += 1
+
         return {
             "status": "active",
             "plan": draft.model_dump() if draft else None,
+            "schedule": draft.schedule if draft else [],
             "tasks": tasks.model_dump() if tasks else None,
+            "stats": stats,
         }
 
     # COMPLETED
