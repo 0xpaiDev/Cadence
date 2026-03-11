@@ -4,7 +4,11 @@ Negotiation session management.
 Handles agent-mediated conversation to refine the daily plan.
 """
 
+import json
 import logging
+import re
+import uuid
+from pathlib import Path
 
 from scripts.runtime import AgentRuntime
 
@@ -14,7 +18,14 @@ logger = logging.getLogger(__name__)
 class NegotiationSession:
     """Manage negotiation conversation and draft mutations."""
 
-    def __init__(self, draft: dict, context: str, runtime: AgentRuntime):
+    def __init__(
+        self,
+        draft: dict,
+        context: str,
+        runtime: AgentRuntime,
+        vault_path: str = "",
+        history: list[dict] | None = None,
+    ):
         """
         Initialize negotiation session.
 
@@ -22,17 +33,15 @@ class NegotiationSession:
             draft: Initial draft dict
             context: Daily context markdown
             runtime: Agent runtime instance
-
-        TODO: Implement
-        - Store draft, context, runtime
-        - Initialize conversation history
-        - Initialize decisions list
+            vault_path: Path to vault for loading system prompt template
+            history: Optional conversation history (for multi-turn sessions)
         """
         self.draft = draft
         self.context = context
         self.runtime = runtime
-        self.history = []
-        self.decisions = []
+        self.vault_path = vault_path
+        self.history = history or []
+        self.decisions: list[dict] = []
 
     def exchange(self, user_message: str) -> dict:
         """
@@ -47,20 +56,27 @@ class NegotiationSession:
                 "draft": {...updated draft...},
                 "decisions": [...decisions made...]
             }
-
-        TODO: Implement
-        - Add user message to history
-        - Build system prompt from negotiation template
-        - Call runtime.call(system + history)
-        - Parse response:
-          - Extract text response
-          - Extract <changes> XML block
-          - Parse JSON actions
-          - Apply mutations to draft
-        - Record decisions
-        - Return response dict
         """
-        return {"error": "Not implemented"}
+        system_prompt = self._build_system_prompt()
+        user_msg = self._build_user_message(user_message)
+
+        response = self.runtime.call(system_prompt, user_msg, max_tokens=600)
+
+        # Strip <changes> block from displayed message
+        display_msg = re.sub(
+            r"<changes>.*?</changes>", "", response, flags=re.DOTALL
+        ).strip()
+
+        # Extract and apply mutations
+        changes = self._extract_changes(response)
+        self._apply_mutations(changes)
+
+        # Record in history
+        self.history.append({"role": "user", "content": user_message})
+        self.history.append({"role": "assistant", "content": display_msg})
+
+        # Return result
+        return {"message": display_msg, "draft": self.draft, "decisions": changes}
 
     def approve(self) -> dict:
         """
@@ -89,21 +105,55 @@ class NegotiationSession:
         """
         Build negotiation system prompt from template.
 
-        TODO: Implement
-        - Load negotiation_template.md from vault/.system/config/
-        - Return template text
-        """
-        return "TODO: Implement"
+        Returns:
+            Template text loaded from vault/.system/config/negotiation_template.md
 
-    def _build_user_message(self) -> str:
+        Raises:
+            FileNotFoundError: If template not found in vault
         """
-        Build user message from draft and context.
+        if not self.vault_path:
+            raise FileNotFoundError("vault_path not provided to NegotiationSession")
 
-        TODO: Implement
-        - Include draft as first message
-        - Include latest user input
+        template_path = (
+            Path(self.vault_path)
+            / ".system"
+            / "config"
+            / "negotiation_template.md"
+        )
+        if not template_path.exists():
+            raise FileNotFoundError(f"Negotiation template not found: {template_path}")
+
+        return template_path.read_text()
+
+    def _build_user_message(self, user_message: str) -> str:
         """
-        return "TODO: Implement"
+        Build user message from draft, context, and history.
+
+        For first turn, includes draft and context.
+        For subsequent turns, includes conversation history.
+
+        Args:
+            user_message: Current user message
+
+        Returns:
+            Formatted user message for agent
+        """
+        if not self.history:
+            # First turn: include draft and context
+            draft_json = json.dumps(self.draft, indent=2)
+            return (
+                f"## Current Draft\n{draft_json}\n\n"
+                f"## Daily Context\n{self.context}\n\n"
+                f"## User Request\n{user_message}"
+            )
+        else:
+            # Subsequent turns: include history then new message
+            history_text = ""
+            for msg in self.history:
+                role = "User" if msg["role"] == "user" else "Assistant"
+                history_text += f"{role}: {msg['content']}\n"
+
+            return f"{history_text}\nUser: {user_message}"
 
     def _extract_changes(self, response: str) -> list[dict]:
         """
@@ -115,28 +165,77 @@ class NegotiationSession:
             response: Agent response text
 
         Returns:
-            List of action dicts
-
-        TODO: Implement
-        - Find <changes> block in response
-        - Parse each line as JSON
-        - Return list of actions
-        - Return empty list if no block found
+            List of action dicts, empty list if no block or parse errors
         """
-        return []
+        match = re.search(r"<changes>(.*?)</changes>", response, re.DOTALL)
+        if not match:
+            return []
+
+        block_content = match.group(1).strip()
+        if not block_content:
+            return []
+
+        actions = []
+        for line in block_content.split("\n"):
+            line = line.strip()
+            if not line:
+                continue
+
+            try:
+                action = json.loads(line)
+                actions.append(action)
+            except json.JSONDecodeError as e:
+                logger.warning(f"Failed to parse action JSON: {line}. Error: {e}")
+                continue
+
+        return actions
 
     def _apply_mutations(self, actions: list[dict]) -> None:
         """
         Apply mutations to draft based on actions.
 
+        Supports:
+        - drop_task: remove task by id
+        - add_task: append new task
+        - reprioritize_task: change task priority
+
         Args:
             actions: List of action dicts from agent
-
-        TODO: Implement
-        - For each action:
-          - drop_task: remove task from draft
-          - add_task: add task to draft
-          - reprioritize_task: change priority
-        - Update self.draft
         """
-        pass
+        for action in actions:
+            action_type = action.get("action")
+
+            if action_type == "drop_task":
+                task_id = action.get("task_id")
+                if task_id:
+                    self.draft["tasks"] = [
+                        t for t in self.draft.get("tasks", []) if t["id"] != task_id
+                    ]
+                    logger.debug(f"Dropped task {task_id}")
+
+            elif action_type == "add_task":
+                text = action.get("text")
+                priority = action.get("priority", "normal")
+                if text:
+                    new_task = {
+                        "id": f"neg_{uuid.uuid4().hex[:8]}",
+                        "text": text,
+                        "source": "negotiation",
+                        "priority": priority,
+                        "status": "pending",
+                    }
+                    self.draft.setdefault("tasks", []).append(new_task)
+                    logger.debug(f"Added task: {text}")
+
+            elif action_type == "reprioritize_task":
+                task_id = action.get("task_id")
+                priority = action.get("priority")
+                if task_id and priority:
+                    for task in self.draft.get("tasks", []):
+                        if task["id"] == task_id:
+                            task["priority"] = priority
+                            logger.debug(f"Reprioritized task {task_id} to {priority}")
+                            break
+
+            else:
+                logger.warning(f"Unknown action type: {action_type}")

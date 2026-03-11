@@ -10,7 +10,8 @@ _Updated at the end of each session. Read this first at the start of every sessi
 - Phase 4: Complete ✅ (news fetcher + RSS)
 - Phase 5: Complete ✅ (agent + pipeline)
 - Phase 6: Complete ✅ (API server + endpoints)
-- Phase 7: Ready to start (negotiation)
+- Phase 7: Complete ✅ (negotiation system)
+- Phase 8: Ready to start (webapp)
 
 ## Phase 1 Summary (Session 2)
 **Goal:** Implement all Pydantic models, create test infrastructure, write 20+ assertions.
@@ -278,6 +279,56 @@ _Updated at the end of each session. Read this first at the start of every sessi
 - File mtime freshness check (simpler than parsing `fetched_at` from JSON)
 - Static mount try/except ensures server starts even before webapp/ exists
 
+## Phase 7 Summary (Session 8)
+**Goal:** Implement interactive negotiation with structured agent output. Write 16+ test assertions.
+
+**Completed:**
+- `vault/.system/config/negotiation_template.md` — System prompt for negotiation agent
+  - Specifies `<changes>...</changes>` XML block with one JSON action per line
+  - Supports 3 action types: `drop_task`, `add_task`, `reprioritize_task`
+  - Constraints: 2–4 sentences max, 1 suggestion per response, accept pushback immediately
+  - Example format shown for clarity
+- `api/negotiation.py` — NegotiationSession class (140 lines)
+  - `exchange(user_message)` — Orchestrates: system prompt → agent call → mutations → history recording
+  - `_build_system_prompt()` — Loads template from vault/.system/config/negotiation_template.md
+  - `_build_user_message(msg)` — First turn: includes draft JSON + context; subsequent: includes history
+  - `_extract_changes(response)` — Regex parses `<changes>...</changes>`, splits JSON lines, graceful error handling
+  - `_apply_mutations(actions)` — Handles drop_task, add_task, reprioritize_task mutations on plain draft dict
+  - History persisted to `vault/.system/state/negotiation_history.json` between HTTP calls
+- `api/routes.py` — Updated POST /api/negotiate endpoint (55 lines)
+  - Loads draft, context, history from vault
+  - Creates NegotiationSession with ClaudeRuntime
+  - Calls session.exchange(req.text), persists updated draft + history
+  - Returns {"message": str, "draft": dict, "decisions": list}
+- `tests/test_negotiation.py` — **20 comprehensive test assertions** (2 test classes)
+  - Class tests (17): exchange keys, changes parsing (valid/empty/malformed JSON), all 3 mutations, history growth, template loading/errors
+  - Endpoint tests (3): 200 response with updated draft, 404 on no draft, history persistence to vault
+  - All tests use MockRuntime (no API calls)
+  - Monkeypatch technique to inject MockRuntime into ClaudeRuntime for endpoint tests
+- Learning material: `learning/phase7-negotiation.md` — 12 topics, 450+ lines
+  - Multi-turn conversation over stateless HTTP
+  - Structured output extraction (XML blocks + JSON)
+  - Agent response post-processing (strip markup)
+  - Draft mutation patterns on plain dicts
+  - MockRuntime testing strategy
+  - Prompt engineering for command-following agents
+  - Common patterns (graceful parsing, first-turn vs subsequent, deterministic IDs)
+
+**Test Results:**
+```
+140 passed in 1.22s ✅
+  - Negotiation: 20 new tests ✅
+  - All previous phases: 120 tests (unchanged) ✅
+```
+
+**Key Achievements:**
+- Full interactive negotiation loop: user message → agent response with mutations → draft updated in place
+- History serialization pattern for multi-turn conversation over stateless HTTP
+- Graceful XML parsing: malformed JSON lines logged + skipped, never crash
+- Plain dict mutations (faster than Pydantic re-validation) with source="negotiation" tracking
+- MockRuntime monkeypatch pattern for endpoint tests without API calls
+- First-turn includes full draft+context; subsequent turns fold history into single message
+
 ## Blockers / Notes
-- None. Phases 0–6 complete.
-- Next: Phase 7 (Negotiation) — `NegotiationSession` class, full `POST /api/negotiate`, `<changes>` XML extraction, draft mutations, decisions logging
+- None. Phases 0–7 complete.
+- Next: Phase 8 (Webapp) — Single HTML file (SPA), vanilla JS, two screens (morning review + active day task tracking)

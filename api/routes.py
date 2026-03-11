@@ -6,6 +6,7 @@ All 6 endpoints for daily review, negotiation, approval, and task tracking.
 
 import json
 import logging
+import os
 from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
@@ -14,7 +15,9 @@ from typing import Optional, Type, TypeVar, cast
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from api.negotiation import NegotiationSession
 from scripts.config import Config, load_config
+from scripts.runtime import ClaudeRuntime
 from scripts.schemas import (
     DayState,
     DayStatus,
@@ -194,17 +197,58 @@ async def negotiate(req: NegotiateRequest) -> dict:
     """
     One round of negotiation with agent.
 
-    Phase 6 stub: advances day_state to NEGOTIATING. Full implementation in Phase 7.
+    Accepts user feedback, calls negotiation agent with current draft,
+    applies mutations, persists history and updated draft.
     """
     config = get_config()
-    day_state = _load(_state(config, "day_state.json"), DayState)
+    vault = _vault(config)
 
+    # Load current draft
+    draft = _load(_drafts_path(config), Draft)
+    if draft is None:
+        raise HTTPException(status_code=404, detail="No draft available")
+
+    # Load or create day_state; advance to NEGOTIATING
+    day_state = _load(_state(config, "day_state.json"), DayState)
+    if day_state and day_state.status == DayStatus.ACTIVE:
+        raise HTTPException(status_code=409, detail="Day already approved")
     if day_state and day_state.status == DayStatus.DRAFT_PENDING:
         day_state.status = DayStatus.NEGOTIATING
         day_state.negotiation_started_at = datetime.now().isoformat() + "Z"
         _write_json(_state(config, "day_state.json"), day_state.model_dump())
 
-    return {"message": "Negotiation not yet implemented (Phase 7)", "draft": None, "decisions": []}
+    # Load context
+    context_path = vault / ".system" / "context" / "daily_context.md"
+    context = context_path.read_text() if context_path.exists() else ""
+
+    # Load conversation history
+    history_path = _state(config, "negotiation_history.json")
+    history: list[dict] = []
+    if history_path.exists():
+        try:
+            history = json.loads(history_path.read_text())
+        except Exception as e:
+            logger.warning(f"Failed to load negotiation history: {e}")
+            history = []
+
+    # Run exchange
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    runtime = ClaudeRuntime(model=config.agent_model, api_key=api_key)
+    session = NegotiationSession(
+        draft=draft.model_dump(),
+        context=context,
+        runtime=runtime,
+        vault_path=str(vault),
+        history=history,
+    )
+    result = session.exchange(req.text)
+
+    # Persist updated draft and history
+    _write_json(_drafts_path(config), result["draft"])
+    history_path.parent.mkdir(parents=True, exist_ok=True)
+    history_path.write_text(json.dumps(session.history))
+
+    return result
 
 
 @router.post("/approve")
