@@ -2,12 +2,20 @@
 
 import json
 import pytest
+import dataclasses
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 from datetime import datetime
 
 from scripts.fetch.calendar_fetcher import CalendarFetcher
-from scripts.schemas import CalendarState, CalendarEvent, CalendarTomorrowEvent
+from scripts.fetch.news_fetcher import NewsFetcher
+from scripts.schemas import (
+    CalendarState,
+    CalendarEvent,
+    CalendarTomorrowEvent,
+    NewsState,
+    NewsItem,
+)
 
 
 @pytest.fixture
@@ -271,3 +279,215 @@ class TestCalendarFetcherBasics:
 
         assert len(state.events) == 1
         assert state.events[0].title == "(No title)"
+
+
+class TestNewsFetcherBasics:
+    """Test NewsFetcher basic functionality."""
+
+    @patch("scripts.fetch.news_fetcher.feedparser.parse")
+    def test_fetch_returns_valid_news_state(self, mock_parse, config):
+        """Test fetching valid news returns NewsState with items."""
+        # Setup mock feed data
+        mock_feed = MagicMock()
+        mock_feed.get.side_effect = lambda k, d=None: {
+            "bozo": False,
+            "entries": [
+                {
+                    "title": "Claude 4 Released",
+                    "link": "https://anthropic.com/claude-4",
+                    "summary": "New Claude model with AI safety features",
+                    "published_parsed": (2025, 6, 15, 10, 0, 0, 0, 166, 0),
+                },
+            ],
+        }.get(k, d)
+
+        mock_parse.return_value = mock_feed
+
+        fetcher = NewsFetcher(config)
+        state = fetcher.fetch()
+
+        assert isinstance(state, NewsState)
+        assert len(state.items) > 0
+        assert all(isinstance(item, NewsItem) for item in state.items)
+        assert state.fetched_at is not None
+
+    def test_relevance_scoring_high_for_ai_keywords(self, config):
+        """Test relevance scoring is high for AI-related keywords."""
+        fetcher = NewsFetcher(config)
+        score = fetcher._score_relevance(
+            "Claude AI safety model",
+            "Anthropic alignment research",
+        )
+        assert score >= 0.4
+
+    def test_relevance_scoring_zero_for_irrelevant(self, config):
+        """Test relevance scoring is zero for unrelated content."""
+        fetcher = NewsFetcher(config)
+        score = fetcher._score_relevance(
+            "Weather in London tomorrow",
+            "Rain expected on Friday",
+        )
+        assert score == 0.0
+
+    @patch("scripts.fetch.news_fetcher.feedparser.parse")
+    def test_items_sorted_by_relevance_descending(self, mock_parse, config):
+        """Test items are sorted by relevance descending."""
+        mock_feed = MagicMock()
+
+        def get_side_effect(k, d=None):
+            data = {
+                "bozo": False,
+                "entries": [
+                    {
+                        "title": "Unrelated weather",
+                        "link": "https://news.com/weather",
+                        "summary": "Rain tomorrow",
+                        "published_parsed": (2025, 6, 15, 10, 0, 0, 0, 166, 0),
+                    },
+                    {
+                        "title": "Claude AI breakthrough",
+                        "link": "https://anthropic.com/claude",
+                        "summary": "Anthropic releases new model",
+                        "published_parsed": (2025, 6, 15, 10, 0, 0, 0, 166, 0),
+                    },
+                ],
+            }
+            return data.get(k, d)
+
+        mock_feed.get = get_side_effect
+        mock_parse.return_value = mock_feed
+
+        fetcher = NewsFetcher(config)
+        state = fetcher.fetch()
+
+        assert len(state.items) == 2
+        assert state.items[0].relevance >= state.items[1].relevance
+
+    @patch("scripts.fetch.news_fetcher.feedparser.parse")
+    def test_items_capped_at_news_max_items(self, mock_parse, config):
+        """Test items are capped at config.news_max_items."""
+        # Create 15 mock entries
+        entries = [
+            {
+                "title": f"News item {i}",
+                "link": f"https://news.com/item{i}",
+                "summary": f"Summary for item {i}",
+                "published_parsed": (2025, 6, 15, 10, 0, 0, 0, 166, 0),
+            }
+            for i in range(15)
+        ]
+
+        mock_feed = MagicMock()
+        mock_feed.get.side_effect = lambda k, d=None: {"bozo": False, "entries": entries}.get(k, d)
+        mock_parse.return_value = mock_feed
+
+        fetcher = NewsFetcher(config)
+        state = fetcher.fetch()
+
+        assert len(state.items) <= config.news_max_items
+
+    @patch("scripts.fetch.news_fetcher.feedparser.parse")
+    def test_feed_error_logged_in_errors(self, mock_parse, config):
+        """Test feed errors are logged in state.errors."""
+        mock_parse.side_effect = Exception("Connection timeout")
+
+        fetcher = NewsFetcher(config)
+        state = fetcher.fetch()
+
+        # Should return valid state without crashing
+        assert isinstance(state, NewsState)
+        assert len(state.errors) > 0
+        assert len(state.items) == 0
+
+    @patch("scripts.fetch.news_fetcher.feedparser.parse")
+    def test_bozo_feed_with_entries_still_parsed(self, mock_parse, config):
+        """Test bozo=True feeds with entries are still parsed."""
+        mock_feed = MagicMock()
+        mock_feed.get.side_effect = lambda k, d=None: {
+            "bozo": True,
+            "entries": [
+                {
+                    "title": "Malformed but parseable",
+                    "link": "https://news.com/item",
+                    "summary": "Still valid entry",
+                    "published_parsed": (2025, 6, 15, 10, 0, 0, 0, 166, 0),
+                },
+            ],
+        }.get(k, d)
+
+        mock_parse.return_value = mock_feed
+
+        fetcher = NewsFetcher(config)
+        state = fetcher.fetch()
+
+        # Should still parse entries despite bozo=True
+        assert len(state.items) >= 1
+
+    def test_write_state_creates_file_at_correct_path(self, config, vault_path):
+        """Test write_state creates file at correct vault path."""
+        # Create config with test vault path
+        test_config = dataclasses.replace(config, vault_path=vault_path)
+
+        # Create state
+        state = NewsState(
+            fetched_at="2025-06-15T06:00:00Z",
+            items=[],
+            errors=[],
+        )
+
+        fetcher = NewsFetcher(test_config)
+        success = fetcher.write_state(state)
+
+        assert success is True
+
+        # Check file exists
+        state_path = Path(vault_path) / ".system" / "state" / "news_state.json"
+        assert state_path.exists()
+
+        # Verify content
+        with open(state_path) as f:
+            saved = json.load(f)
+        assert "items" in saved
+        assert "fetched_at" in saved
+
+    def test_write_state_returns_false_on_error(self, config):
+        """Test write_state returns False on write error."""
+        state = NewsState(
+            fetched_at="2025-06-15T06:00:00Z",
+            items=[],
+            errors=[],
+        )
+
+        fetcher = NewsFetcher(config)
+
+        # Mock write failure
+        with patch.object(Path, "write_text", side_effect=PermissionError("No access")):
+            success = fetcher.write_state(state)
+            assert success is False
+
+    @patch("scripts.fetch.news_fetcher.feedparser.parse")
+    def test_duplicate_urls_deduplicated(self, mock_parse, config):
+        """Test duplicate URLs across feeds are deduplicated."""
+        # Both feeds return the same URL
+        def parse_side_effect(url):
+            mock_feed = MagicMock()
+            mock_feed.get.side_effect = lambda k, d=None: {
+                "bozo": False,
+                "entries": [
+                    {
+                        "title": "Shared article",
+                        "link": "https://news.com/shared",
+                        "summary": "Claude AI news",
+                        "published_parsed": (2025, 6, 15, 10, 0, 0, 0, 166, 0),
+                    },
+                ],
+            }.get(k, d)
+            return mock_feed
+
+        mock_parse.side_effect = parse_side_effect
+
+        fetcher = NewsFetcher(config)
+        state = fetcher.fetch()
+
+        # Should have only 1 item despite 4 sources
+        assert len(state.items) == 1

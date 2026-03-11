@@ -8,6 +8,7 @@ import logging
 from pathlib import Path
 from scripts.config import Config, load_config
 from scripts.fetch.calendar_fetcher import CalendarFetcher
+from scripts.fetch.news_fetcher import NewsFetcher
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +43,19 @@ def fetch_all(config: Config = None) -> bool:
         logger.error(f"Calendar fetch failed: {e}")
         all_success = False
 
-    # NewsFetcher will be implemented in Phase 4
-    # TODO: Implement NewsFetcher and wire it in here
+    # News fetcher
+    try:
+        logger.info("Fetching news items")
+        news_fetcher = NewsFetcher(config)
+        news_state = news_fetcher.fetch()
+        if news_fetcher.write_state(news_state):
+            logger.info(f"News state written: {len(news_state.items)} items")
+        else:
+            logger.error("Failed to write news state")
+            all_success = False
+    except Exception as e:
+        logger.error(f"News fetch failed: {e}")
+        all_success = False
 
     logger.info("Fetchers complete")
     return all_success
