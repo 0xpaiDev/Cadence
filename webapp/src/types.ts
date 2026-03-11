@@ -24,7 +24,7 @@ export interface CalendarEvent {
 
 export interface CalendarTomorrowEvent {
   title: string
-  time_start?: string
+  start?: string
   all_day: boolean
 }
 
@@ -83,6 +83,7 @@ export interface ApiResponseDraft {
   status: 'draft'
   draft: Draft
   freshness: Freshness
+  tasks?: DayTasks  // Tasks added during negotiation via POST /api/tasks
 }
 
 export interface ApiResponseActive {

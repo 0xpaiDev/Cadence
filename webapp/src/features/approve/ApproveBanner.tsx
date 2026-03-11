@@ -9,7 +9,9 @@ export const ApproveBanner: React.FC = () => {
   const approveMutation = useMutation({
     mutationFn: () => api.approve(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['today'] })
+      // Refetch and wait for the new data (status: ACTIVE with plan and schedule)
+      // Returning the promise ensures the mutation loading state continues until refetch completes
+      return queryClient.refetchQueries({ queryKey: ['today'] })
     },
   })
 
