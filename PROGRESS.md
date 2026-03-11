@@ -5,7 +5,8 @@ _Updated at the end of each session. Read this first at the start of every sessi
 ## Current Phase
 - Phase 0: Complete ✅ (scaffold done)
 - Phase 1: Complete ✅ (schemas + test infrastructure)
-- Phase 2: Ready to start (context builder)
+- Phase 2: Complete ✅ (context builder)
+- Phase 3: Ready to start (calendar fetcher)
 
 ## Phase 1 Summary (Session 2)
 **Goal:** Implement all Pydantic models, create test infrastructure, write 20+ assertions.
@@ -30,6 +31,44 @@ _Updated at the end of each session. Read this first at the start of every sessi
 - Schema version tracking documented (not enforced yet)
 - Graceful degradation in load_state() confirmed (None on error, not crash)
 
+## Phase 2 Summary (Session 3)
+**Goal:** Implement context builder to merge state files into daily_context.md. Write 10+ assertions.
+
+**Completed:**
+- `scripts/build_context.py` — Full implementation with 1 public + 3 private functions
+  - `build_context_from_vault()` — Main entry point, orchestrates all sections
+  - `_render_news_section()` — Formats news as markdown links, sorted by relevance
+  - `_render_schedule_section()` — Formats calendar events with times or "All day"
+  - `_render_tomorrow_section()` — Tomorrow preview with same formatting
+  - Absolute imports fixed: `from scripts.schemas import ...` (no more relative imports)
+  - Token budget enforcement: trims news items (lowest relevance) until under budget
+  - Graceful degradation: missing/malformed state → skip section, log warning, never crash
+- `tests/test_context_builder.py` — **13 test assertions** covering:
+  - All 5 sections render with valid state
+  - Missing files/state gracefully skipped
+  - Malformed JSON handled without crash
+  - All-day events shown as "All day:" label
+  - Token budget trimming (trims lowest-relevance news)
+  - News capped at `config.news_max_items`
+  - Tomorrow preview rendering
+  - Schedule sorted chronologically
+  - News sorted by relevance descending
+
+**Test Results:**
+```
+70 passed in 0.15s ✅
+  - Context builder: 13 new tests ✅
+  - Schemas: 49 tests (unchanged) ✅
+  - Placeholders: 8 tests ✅
+```
+
+**Key Achievements:**
+- Context builder merges calendar, news, tasks, training into single markdown doc
+- Token budget respected via iterative news trimming (O(n) algorithm, n ≤ 10)
+- All date parsing handles ISO 8601 with Z suffix (Python 3.11+ safe)
+- Raw markdown files (tasks, training) included verbatim after section heading
+- Logging on graceful degradation (helps debugging in production)
+
 ## Blockers / Notes
-- None. Phase 1 clean completion.
-- Next: Phase 2 (Context Builder) — merge state files into daily_context.md
+- None. Phase 2 clean completion.
+- Next: Phase 3 (Calendar Fetcher) — Google Calendar API → calendar_state.json
