@@ -13,7 +13,7 @@ from typing import Optional
 
 from scripts.agent_daily_planner import generate_draft
 from scripts.build_context import build_context_from_vault
-from scripts.config import Config, load_config
+from scripts.config import Config, load_config, setup_logging
 from scripts.fetch.fetch_all import fetch_all
 from scripts.runtime import ClaudeRuntime
 from scripts.schemas import DayState, DayStatus
@@ -35,6 +35,9 @@ def run_pipeline(config: Optional[Config] = None) -> bool:
         # 1. Load config if not provided
         if config is None:
             config = load_config()
+
+        # Set up logging before any operations
+        setup_logging(config.vault_path, config.log_level)
 
         logger.info("Pipeline starting")
 
@@ -116,6 +119,7 @@ def run_pipeline(config: Optional[Config] = None) -> bool:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    success = run_pipeline()
+    config = load_config()
+    setup_logging(config.vault_path, config.log_level)
+    success = run_pipeline(config)
     exit(0 if success else 1)

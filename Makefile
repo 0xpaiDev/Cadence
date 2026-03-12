@@ -1,4 +1,4 @@
-.PHONY: help test test-all test-schema test-context test-fetch test-agent test-api test-negotiate test-tasks test-webapp fetch pipeline serve serve-prod check-state lint init-vault install clean commit push webapp-install webapp-build webapp-dev
+.PHONY: help test test-all test-schema test-context test-fetch test-agent test-api test-negotiate test-tasks test-webapp fetch pipeline serve serve-prod check-state lint init-vault install clean commit push install-service setup-cron check-logs status webapp-install webapp-build webapp-dev
 
 help:
 	@echo "Cadence Development Commands"
@@ -29,6 +29,12 @@ help:
 	@echo "  make init-vault        Initialize vault directory structure"
 	@echo "  make install           Install dev dependencies"
 	@echo "  make clean             Remove build artifacts, caches, logs"
+	@echo ""
+	@echo "Automation (Phase 9):"
+	@echo "  make install-service   Install systemd service (sudo required)"
+	@echo "  make setup-cron        Install pipeline cron entry (crontab)"
+	@echo "  make check-logs        Tail vault log files"
+	@echo "  make status            Show systemd + cron + vault status"
 	@echo ""
 	@echo "Git:"
 	@echo "  make commit            Stage all changes and commit (prompts for message)"
@@ -114,6 +120,63 @@ clean:
 	rm -rf .pytest_cache .coverage htmlcov
 	rm -rf build dist *.egg-info
 	find . -type f -name "*.log" -delete
+
+install-service:
+	@echo "Installing systemd service cadence-api..."
+	@if [ ! -f deploy/cadence-api.service ]; then \
+		echo "Error: deploy/cadence-api.service not found"; \
+		exit 1; \
+	fi
+	sudo cp deploy/cadence-api.service /etc/systemd/system/
+	sudo systemctl daemon-reload
+	sudo systemctl enable cadence-api.service
+	@echo "✓ Service installed and enabled"
+	@echo "Run: sudo systemctl start cadence-api"
+
+setup-cron:
+	@echo "Installing pipeline cron entry..."
+	@if ! command -v crontab &> /dev/null; then \
+		echo "Error: crontab not found"; \
+		exit 1; \
+	fi
+	@if [ ! -f deploy/crontab.txt ]; then \
+		echo "Error: deploy/crontab.txt not found"; \
+		exit 1; \
+	fi
+	@# Remove old cadence entries, then add new ones
+	@crontab -l 2>/dev/null | grep -v "cadence\|Cadence" > /tmp/crontab_temp || true
+	@cat deploy/crontab.txt >> /tmp/crontab_temp
+	@crontab /tmp/crontab_temp
+	@rm /tmp/crontab_temp
+	@echo "✓ Cron entry installed"
+	@echo "View: crontab -l"
+
+check-logs:
+	@vault_path=$$(grep '^path' cadence.toml | awk -F'"' '{print $$2}'); \
+	if [ -z "$$vault_path" ]; then vault_path="/home/shu/vault"; fi; \
+	echo "=== Pipeline Log ==="; \
+	tail -20 "$$vault_path/.system/logs/pipeline.log" 2>/dev/null || echo "No pipeline log yet"; \
+	echo ""; \
+	echo "=== API Log ==="; \
+	tail -20 "$$vault_path/.system/logs/api.log" 2>/dev/null || echo "No API log yet"
+
+status:
+	@echo "=== Systemd Service ===" && \
+	systemctl status cadence-api 2>/dev/null || echo "Service not installed (run: make install-service)"; \
+	echo ""; \
+	echo "=== Cron Entry ===" && \
+	crontab -l 2>/dev/null | grep -i cadence || echo "No cron entry found (run: make setup-cron)"; \
+	echo ""; \
+	echo "=== Vault Status ===" && \
+	vault_path=$$(grep '^path' cadence.toml | awk -F'"' '{print $$2}'); \
+	if [ -z "$$vault_path" ]; then vault_path="/home/shu/vault"; fi; \
+	if [ -d "$$vault_path/.system" ]; then \
+		echo "Vault: OK ($$vault_path)"; \
+		echo "State files:"; \
+		ls -lh "$$vault_path/.system/state/" 2>/dev/null | tail -5; \
+	else \
+		echo "Vault: NOT FOUND ($$vault_path)"; \
+	fi
 
 commit:
 	@git status

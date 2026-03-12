@@ -1,0 +1,29 @@
+[Unit]
+Description=Cadence API Server
+Documentation=https://github.com/anthropics/cadence
+After=network.target
+
+[Service]
+Type=simple
+User=shu
+Group=shu
+WorkingDirectory=/home/shu/projects/Cadence
+
+# Start command: use the system uvicorn (from pip install)
+ExecStart=/usr/local/bin/uvicorn api.server:app --host 0.0.0.0 --port 8420
+
+# Restart policy
+Restart=on-failure
+RestartSec=5
+
+# Environment: API key should be set in systemd environment or via .env file
+# For security, consider: Environment="ANTHROPIC_API_KEY=%h/.config/cadence/api_key"
+# Or run: systemctl set-environment ANTHROPIC_API_KEY=<your-key>
+
+# Logging: send to systemd journal (view with: journalctl -u cadence-api)
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cadence-api
+
+[Install]
+WantedBy=multi-user.target

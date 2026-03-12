@@ -1,5 +1,7 @@
 """Load and expose Cadence configuration from cadence.toml."""
 
+import logging
+import logging.handlers
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -86,3 +88,55 @@ def load_config(path: str = "cadence.toml") -> Config:
         allowed_origins=api_cfg.get("allowed_origins", ["http://localhost:8420"]),
         log_level=logging_cfg.get("level", "INFO"),
     )
+
+
+def setup_logging(vault_path: str, log_level: str = "INFO") -> None:
+    """
+    Configure logging with file handlers for vault logs.
+
+    Creates rotating file handlers for both pipeline and API logs.
+    Logs are written to vault/.system/logs/{pipeline,api}.log with rotation
+    after 1MB (keeping up to 3 backups).
+
+    Args:
+        vault_path: Path to the vault directory
+        log_level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+    """
+    vault = Path(vault_path)
+    logs_dir = vault / ".system" / "logs"
+    logs_dir.mkdir(parents=True, exist_ok=True)
+
+    # Root logger configuration
+    root_logger = logging.getLogger()
+    root_logger.setLevel(getattr(logging, log_level.upper(), logging.INFO))
+
+    # Clear existing handlers (important for reloads)
+    root_logger.handlers.clear()
+
+    # Format: timestamp | level | module | message
+    formatter = logging.Formatter(
+        "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S"
+    )
+
+    # Pipeline log handler
+    pipeline_log = logs_dir / "pipeline.log"
+    pipeline_handler = logging.handlers.RotatingFileHandler(
+        pipeline_log,
+        maxBytes=1_000_000,  # 1MB
+        backupCount=3,
+        encoding="utf-8"
+    )
+    pipeline_handler.setFormatter(formatter)
+    root_logger.addHandler(pipeline_handler)
+
+    # API log handler (also writes to root, captured via logging in api.server)
+    api_log = logs_dir / "api.log"
+    api_handler = logging.handlers.RotatingFileHandler(
+        api_log,
+        maxBytes=1_000_000,  # 1MB
+        backupCount=3,
+        encoding="utf-8"
+    )
+    api_handler.setFormatter(formatter)
+    root_logger.addHandler(api_handler)
