@@ -12,7 +12,7 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   date,
   freshness,
-  userName = 'nanobanan2',
+  userName = 'Petras',
 }) => {
   return (
     <div className="bg-gradient-to-b from-slate-dark to-obsidian border-b border-topo/30 p-6 pt-8">
@@ -20,7 +20,7 @@ export const Header: React.FC<HeaderProps> = ({
         <h1 className="text-2xl font-serif font-bold mb-2">
           Good Morning, <span className="text-orange">{userName}</span>.
         </h1>
-        <p className="text-gray-400 mb-4">The trails are calling.</p>
+        <p className="text-gray-400 mb-4">The trails are calling.</p> // TODO something usefull here
 
         <div className="flex items-center justify-between">
           <p className="text-sm text-gray-400">{formatDate(date)}</p>
@@ -30,13 +30,13 @@ export const Header: React.FC<HeaderProps> = ({
                 variant={freshness.calendar ? 'success' : 'error'}
                 title={freshness.calendar ? 'Calendar synced' : 'Calendar stale'}
               >
-                📅 {freshness.calendar ? 'Fresh' : 'Stale'}
+                📅 Cal {freshness.calendar ? '✓' : '✗'}
               </Badge>
               <Badge
                 variant={freshness.news ? 'success' : 'error'}
                 title={freshness.news ? 'News fresh' : 'News stale'}
               >
-                📰 {freshness.news ? 'Fresh' : 'Stale'}
+                📰 News {freshness.news ? '✓' : '✗'}
               </Badge>
             </div>
           )}

@@ -225,7 +225,7 @@ class DraftScheduleItem(BaseModel):
     """Schedule item in draft."""
     id: str
     time_start: str  # HH:MM
-    time_end: str  # HH:MM
+    time_end: Optional[str] = None  # HH:MM (optional for all-day events)
     title: str
     location: Optional[str] = None
     all_day: bool = False

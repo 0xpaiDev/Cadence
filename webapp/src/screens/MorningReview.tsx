@@ -26,7 +26,15 @@ export const MorningReview: React.FC<MorningReviewProps> = ({ data }) => {
           schedule={draft.schedule}
           tomorrowPreview={draft.tomorrow_preview}
         />
-        <TaskList tasks={draft.tasks} isActiveDay={false} />
+        {/* Use API tasks if available (added during negotiation), otherwise use draft tasks */}
+        <TaskList tasks={data.tasks?.tasks || draft.tasks} isActiveDay={false} />
+
+        {/* Context-aware hint for task adding */}
+        <div className="mb-6 p-3 bg-topo/10 border border-topo/30 rounded text-sm text-gray-300">
+          💡 Use <span className="text-orange font-medium">Collie</span> to negotiate tasks, or
+          <span className="text-orange font-medium"> SEND IT</span> to approve and add ad-hoc tasks.
+        </div>
+
         <AddTaskForm />
         <TrainingCard training={draft.training} />
 

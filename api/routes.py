@@ -173,10 +173,15 @@ async def get_today() -> dict:
     if day_state.status in (DayStatus.DRAFT_PENDING, DayStatus.NEGOTIATING):
         draft = _load(_drafts_path(config), Draft)
         draft_dict = draft.model_dump() if draft else None
+
+        # Include tasks if they exist (added during negotiation via POST /api/tasks)
+        tasks = _load(_state(config, "tasks_today.json"), DayTasks)
+
         return {
             "status": "draft",
             "draft": draft_dict,
             "freshness": {"calendar": cal_fresh, "news": news_fresh},
+            "tasks": tasks.model_dump() if tasks else None,
         }
 
     if day_state.status == DayStatus.ACTIVE:

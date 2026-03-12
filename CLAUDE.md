@@ -275,10 +275,10 @@ level = "INFO"
    - `/api/negotiate` endpoint
    - Tests: `test_negotiation.py`
 
-8. **Phase 8 (Days 12-15):** Webapp
-   - `webapp/index.html`, `styles.css`, `app.js`
-   - Two screens: morning review + active day
-   - Mobile-responsive, phone-friendly
+8. **Phase 8 (Days 12-15):** Webapp (DEPRECATED — replaced by Phase 8.1 React SPA)
+   - Original plan: `webapp/index.html`, `styles.css`, `app.js` (vanilla JS)
+   - **Superseded by Phase 8.1:** React 18 + TypeScript + Tailwind + Vite build
+   - See "Webapp Structure (Phase 8.1+)" section for current implementation details
 
 9. **Phase 9 (Days 15-17):** Automation + hardening
    - Cron setup, systemd service
